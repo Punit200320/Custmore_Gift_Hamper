@@ -126,11 +126,18 @@ export default function ProductDetailModal({ product, onClose }) {
               )}
 
               {/* Allergens note */}
-              {product.allergens && (
+              {product.allergens ? (
                 <div className="mt-3 flex items-start gap-2 text-[11px] text-[#8C6D4C] bg-[#FDF9F2] p-2.5 rounded-lg border border-[#F0E4D0]">
                   <AlertCircle className="w-3.5 h-3.5 text-[#C5A059] shrink-0 mt-0.5" />
                   <span>{product.allergens}</span>
                 </div>
+              ) : (
+                product.category !== 'Gift Hampers' && product.category !== 'Gift Packaging' && (
+                  <div className="mt-3 flex items-start gap-2 text-[11px] text-[#A6611A] bg-[#FEF6E4] p-2.5 rounded-lg border border-[#F4DCB0]">
+                    <AlertCircle className="w-3.5 h-3.5 text-[#D97706] shrink-0 mt-0.5" />
+                    <span>⚠️ Verification Warning: Ingredients or allergen information is missing — not verified allergy-safe.</span>
+                  </div>
+                )
               )}
             </div>
 

@@ -307,6 +307,31 @@ export const initialProducts = [
     isSkincare: false,
     isPopular: false
   },
+  {
+    id: 'prod-acc-4',
+    name: 'Artisan Volcanic Pumice Foot Smoothing Stone',
+    tagline: 'Natural cellular volcanic rock with untreated cotton loop',
+    category: 'Accessories',
+    subCategory: 'Bath Accessories',
+    price: 199,
+    rating: 4.6,
+    reviewCount: 34,
+    available: true,
+    stock: 25,
+    badge: 'Mineral Craft',
+    imageUrl: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80',
+    description: 'Traditional cellular volcanic pumice stone for smoothing heels. Note: Laboratory mineral and allergen certification pending.',
+    ingredients: [],
+    allergens: '',
+    fragrance: 'Fragrance Free',
+    texture: 'Coarse Volcanic Mineral',
+    productFormat: 'Single Mineral Stone',
+    volume: '1 Unit',
+    suitability: 'Foot exfoliation and dry heels',
+    howToUse: 'Rub gently on damp callused skin with warm water.',
+    isSkincare: false,
+    isPopular: false
+  },
 
   // --- PERSONALISED GIFTS ---
   {

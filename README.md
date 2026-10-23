@@ -77,28 +77,33 @@ The platform unites three core customer discovery experiences into one seamless 
 
 ## 3. Setup and Execution Instructions
 
+### Project Structure
+- **`frontend/`**: Complete React + Vite boutique application, Tailwind CSS, Value Hamper Mode, Interactive Studio, and Skincare Discovery.
+- **`backend/`**: Express.js REST API and PostgreSQL database schema definitions.
+
 ### Prerequisites
 - Node.js (v18 or higher recommended)
 - npm (v9 or higher)
 
-### Installation
-Clone or navigate to the project directory:
-```bash
-cd c:\Users\DELL\Desktop\Prototype2
-npm install
-```
-
 ### Running the Frontend
-Start the Vite development server:
+Navigate into the `frontend/` directory (or run from root):
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Open your browser to `http://localhost:5173`.
+
+Alternatively, from the project root:
 ```bash
 npm run dev
 ```
-Open your browser to `http://localhost:5173` (or the port indicated in your terminal).
 
-### Running the Optional Backend Server
+### Running the Backend Server
 To run the Express REST API:
 ```bash
-node server/server.js
+cd backend
+node server.js
 ```
 The server will start on port `5000`.
 
