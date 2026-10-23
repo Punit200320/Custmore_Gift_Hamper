@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-serif: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #FAF7F2;
+    color: #2D2A26;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, .font-serif {
+    font-family: var(--font-serif);
+  }
+}
+
+/* Custom luxury scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #FAF7F2;
+}
+::-webkit-scrollbar-thumb {
+  background: #D9CEBE;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #BFAFA0;
+}
+
+/* Glassmorphism and boutique card styles */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(229, 219, 203, 0.6);
+}
+
+.gold-shimmer {
+  background: linear-gradient(135deg, #FAF7F2 0%, #FFFDF9 50%, #F5EFEB 100%);
+  position: relative;
+}
+
+.gold-badge {
+  background: linear-gradient(135deg, #FBF6EE 0%, #F5E8D2 100%);
+  border: 1px solid #E6D2B5;
+  color: #8C6D37;
+}
+
+.shadow-boutique {
+  box-shadow: 0 10px 30px -10px rgba(74, 55, 40, 0.08), 0 4px 12px -2px rgba(74, 55, 40, 0.04);
+}
+
+.shadow-boutique-hover {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.shadow-boutique-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -15px rgba(74, 55, 40, 0.14), 0 8px 16px -4px rgba(74, 55, 40, 0.06);
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(212, 175, 55, 0.45);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 3s infinite ease-in-out;
+}
