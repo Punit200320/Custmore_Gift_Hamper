@@ -9,10 +9,10 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Demo Data Initializer for Surreal Treasures.
@@ -52,6 +52,9 @@ public class DemoDataInitializer implements CommandLineRunner {
                         Arrays.asList("saponified olive oil", "coconut oil", "lavender essential oil", "roman chamomile extract", "french purple clay"),
                         Arrays.asList("lavender"),
                         IngredientVerificationStatus.VERIFIED,
+                        LocalDate.of(2026, 7, 10),
+                        "Biodegradable banana fiber paper wrap with cotton twine",
+                        "Crafted on dedicated nut-free equipment; facility processes botanical florals.",
                         true,
                         true,
                         "https://images.unsplash.com/photo-1607006314644-883a48e78550?w=500&auto=format&fit=crop&q=80"
@@ -69,6 +72,9 @@ public class DemoDataInitializer implements CommandLineRunner {
                         Arrays.asList("jojoba oil", "rosehip seed oil", "bergamot peel oil", "sweet orange essential oil", "vitamin e tocopherol"),
                         Arrays.asList("citrus"),
                         IngredientVerificationStatus.VERIFIED,
+                        LocalDate.of(2026, 8, 1),
+                        "100ml amber UV-shield glass bottle with bamboo treatment pump",
+                        "Zero tree nut cross-contact recorded in batch log.",
                         true,
                         true,
                         "https://images.unsplash.com/photo-1608248597359-0091871e4d1f?w=500&auto=format&fit=crop&q=80"
@@ -86,6 +92,9 @@ public class DemoDataInitializer implements CommandLineRunner {
                         Arrays.asList("raw kokum butter", "shea butter", "sweet almond oil", "damask rose floral wax", "vegetable squalane"),
                         Arrays.asList("almond", "nuts", "tree nuts"),
                         IngredientVerificationStatus.VERIFIED,
+                        LocalDate.of(2026, 6, 20),
+                        "120g frosted cosmetic glass jar with engraved bamboo lid",
+                        "Contains declared sweet almond oil. Handcrafted in studio where nut butters are handled.",
                         true,
                         true,
                         "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=500&auto=format&fit=crop&q=80"
@@ -103,6 +112,9 @@ public class DemoDataInitializer implements CommandLineRunner {
                         Arrays.asList("unrefined shea butter", "candelilla wax", "virgin coconut oil", "green cardamom essential oil"),
                         Arrays.asList(),
                         IngredientVerificationStatus.VERIFIED,
+                        LocalDate.of(2026, 8, 12),
+                        "15g recyclable aluminum travel slide tin",
+                        "Nut-free formulation; studio handles floral extracts.",
                         true,
                         true,
                         "https://images.unsplash.com/photo-1599839575945-a9e5af0c3fa5?w=500&auto=format&fit=crop&q=80"
@@ -120,6 +132,9 @@ public class DemoDataInitializer implements CommandLineRunner {
                         Arrays.asList("100% natural xiuyan nephrite jade stone", "brass hardware"),
                         Arrays.asList(),
                         IngredientVerificationStatus.VERIFIED,
+                        LocalDate.of(2026, 5, 14),
+                        "Lined keepsake drawer box with magnetic closure",
+                        null, // Non-formulation tool: no cross-contamination
                         true,
                         false,
                         "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=500&auto=format&fit=crop&q=80"
@@ -137,6 +152,9 @@ public class DemoDataInitializer implements CommandLineRunner {
                         Arrays.asList("pure santalum album sandalwood distillate", "rosa damascena distillate", "vegetable glycerin"),
                         Arrays.asList(),
                         IngredientVerificationStatus.VERIFIED,
+                        LocalDate.of(2026, 7, 25),
+                        "100ml cobalt glass fine-mist spray bottle",
+                        "Hypoallergenic steam-distillation line.",
                         true,
                         true,
                         "https://images.unsplash.com/photo-1617897903246-719242758050?w=500&auto=format&fit=crop&q=80"
@@ -154,6 +172,9 @@ public class DemoDataInitializer implements CommandLineRunner {
                         Arrays.asList("finely milled walnut shell", "kashmiri saffron stigmas", "chickpea flour", "turmeric extract", "almond meal"),
                         Arrays.asList("walnut", "almond", "nuts", "tree nuts"),
                         IngredientVerificationStatus.VERIFIED,
+                        LocalDate.of(2026, 6, 18),
+                        "100g amber cosmetic tub with inner protective hygiene gasket",
+                        "Contains tree nuts (walnut, almond). Not suitable for individuals with nut allergies.",
                         true,
                         true,
                         "https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?w=500&auto=format&fit=crop&q=80"
@@ -171,6 +192,9 @@ public class DemoDataInitializer implements CommandLineRunner {
                         Arrays.asList("golden soy wax", "vanilla planifolia oil", "mysore sandalwood fragrance oil", "natural wood wick"),
                         Arrays.asList(),
                         IngredientVerificationStatus.VERIFIED,
+                        LocalDate.of(2026, 7, 30),
+                        "Matte amber glass tumbler with raw cork lid",
+                        null,
                         true,
                         true,
                         "https://images.unsplash.com/photo-1603006905003-be475563bc59?w=500&auto=format&fit=crop&q=80"
@@ -188,6 +212,9 @@ public class DemoDataInitializer implements CommandLineRunner {
                         Arrays.asList("kashmiri saffron", "sandalwood oil", "manjistha root", "licorice extract", "sesame seed oil"),
                         Arrays.asList("sesame"),
                         IngredientVerificationStatus.VERIFIED,
+                        LocalDate.of(2026, 8, 5),
+                        "30ml luxury emerald dropper vial with gold collar",
+                        "Prepared using traditional sesame base; processed on sesame-handling line.",
                         true,
                         true,
                         "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=500&auto=format&fit=crop&q=80"
@@ -205,6 +232,9 @@ public class DemoDataInitializer implements CommandLineRunner {
                         Arrays.asList("calendula officinalis flower infusion", "sunflower seed oil", "candelilla wax", "shea butter"),
                         Arrays.asList(),
                         IngredientVerificationStatus.VERIFIED,
+                        LocalDate.of(2026, 8, 10),
+                        "50g recyclable aluminum screw-top tin",
+                        "Strict allergen-quarantined formulation line; zero nuts, fragrance, or essential oils.",
                         true,
                         true,
                         "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=500&auto=format&fit=crop&q=80"
@@ -223,6 +253,9 @@ public class DemoDataInitializer implements CommandLineRunner {
                         Arrays.asList("argan oil", "cedarwood oil", "vetiver oil"),
                         Arrays.asList(),
                         IngredientVerificationStatus.VERIFIED,
+                        LocalDate.of(2026, 5, 2),
+                        "50ml dark amber dropper bottle",
+                        null,
                         true,
                         true,
                         "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=500&auto=format&fit=crop&q=80"
@@ -241,6 +274,9 @@ public class DemoDataInitializer implements CommandLineRunner {
                         Arrays.asList("unverified botanical salts", "proprietary scent blend"),
                         Arrays.asList(),
                         IngredientVerificationStatus.UNVERIFIED, // Not verified!
+                        null, // Verification date unknown
+                        "Kraft paper pouch with zip lock",
+                        "Unknown cross-contamination risk; supplier audit pending.",
                         true,
                         true,
                         "https://images.unsplash.com/photo-1508759073847-9ca702cec7d2?w=500&auto=format&fit=crop&q=80"

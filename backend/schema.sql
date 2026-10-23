@@ -28,6 +28,9 @@ CREATE TABLE IF NOT EXISTS products (
     active BOOLEAN NOT NULL DEFAULT TRUE,
     handmade BOOLEAN NOT NULL DEFAULT TRUE,
     image_url TEXT,
+    last_verification_date DATE,
+    packaging_info VARCHAR(255),
+    cross_contamination_warning TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

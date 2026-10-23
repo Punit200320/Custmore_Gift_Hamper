@@ -326,4 +326,60 @@ class HamperRecommendationServiceTest {
             assertNotNull(response.getUpsell().getMessage());
         }
     }
+
+    @Test
+    @DisplayName("11. Transparency Explanation: Explains exact recorded allergen conflict")
+    void testExplainProductEligibilityAllergenConflict() {
+        when(productRepository.findById("p2")).thenReturn(Optional.of(testCatalog.get(1))); // p2 = Almond Rose Soufflé
+
+        CustomerRequirementsDTO request = new CustomerRequirementsDTO();
+        request.setMaxBudget(new BigDecimal("1500.00"));
+        request.setAllergies(Collections.singletonList("almond"));
+
+        Optional<ProductExclusionExplanationDTO> explanationOpt = recommendationService.explainProductEligibility("p2", request);
+
+        assertTrue(explanationOpt.isPresent());
+        ProductExclusionExplanationDTO explanation = explanationOpt.get();
+        assertFalse(explanation.isEligible());
+        assertEquals("ALLERGEN_CONFLICT", explanation.getExclusionCategory());
+        assertTrue(explanation.getConflictingRestriction().contains("almond"));
+        assertNotNull(explanation.getTransparency());
+        assertFalse(explanation.getTransparency().getSafeForCustomerAllergies());
+    }
+
+    @Test
+    @DisplayName("12. Transparency Explanation: Explains exact skin-type incompatibility")
+    void testExplainProductEligibilitySkinTypeIncompatible() {
+        when(productRepository.findById("p3")).thenReturn(Optional.of(testCatalog.get(2))); // p3 = Walnut Scrub for Oily skin
+
+        CustomerRequirementsDTO request = new CustomerRequirementsDTO();
+        request.setMaxBudget(new BigDecimal("1500.00"));
+        request.setSkinType("Sensitive");
+
+        Optional<ProductExclusionExplanationDTO> explanationOpt = recommendationService.explainProductEligibility("p3", request);
+
+        assertTrue(explanationOpt.isPresent());
+        ProductExclusionExplanationDTO explanation = explanationOpt.get();
+        assertFalse(explanation.isEligible());
+        assertEquals("SKIN_TYPE_INCOMPATIBLE", explanation.getExclusionCategory());
+        assertTrue(explanation.getConflictingRestriction().contains("Sensitive"));
+    }
+
+    @Test
+    @DisplayName("13. Transparency Explanation: Explains conservative unverified exclusion")
+    void testExplainProductEligibilityConservativeUnverified() {
+        when(productRepository.findById("p10")).thenReturn(Optional.of(testCatalog.get(9))); // p10 = UNVERIFIED
+
+        CustomerRequirementsDTO request = new CustomerRequirementsDTO();
+        request.setMaxBudget(new BigDecimal("1500.00"));
+        request.setAllergies(Collections.singletonList("gluten"));
+
+        Optional<ProductExclusionExplanationDTO> explanationOpt = recommendationService.explainProductEligibility("p10", request);
+
+        assertTrue(explanationOpt.isPresent());
+        ProductExclusionExplanationDTO explanation = explanationOpt.get();
+        assertFalse(explanation.isEligible());
+        assertEquals("UNVERIFIED_INGREDIENTS", explanation.getExclusionCategory());
+        assertTrue(explanation.getReason().contains("conservative allergy safety policy"));
+    }
 }
