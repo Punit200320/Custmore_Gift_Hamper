@@ -137,4 +137,35 @@ public class CorporateQuotationControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Validation Failed"));
     }
+
+    @Test
+    @DisplayName("POST /api/corporate/quotes with negative quantity returns 400 Bad Request")
+    void testValidationFailureNegativeQuantity() throws Exception {
+        CorporateQuotationRequestDTO invalidReq = new CorporateQuotationRequestDTO();
+        invalidReq.setCompanyName("Acme Corp");
+        invalidReq.setQuantity(-10); // negative quantity!
+        invalidReq.setBudgetPerHamper(new BigDecimal("1500.00"));
+
+        mockMvc.perform(post("/api/corporate/quotes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidReq)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Validation Failed"));
+    }
+
+    @Test
+    @DisplayName("POST /api/corporate/quotes with negative budget returns 400 Bad Request")
+    void testValidationFailureNegativeBudget() throws Exception {
+        CorporateQuotationRequestDTO invalidReq = new CorporateQuotationRequestDTO();
+        invalidReq.setCompanyName("Acme Corp");
+        invalidReq.setQuantity(10);
+        invalidReq.setBudgetPerHamper(new BigDecimal("-500.00")); // negative budget!
+
+        mockMvc.perform(post("/api/corporate/quotes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidReq)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Validation Failed"));
+    }
 }
+

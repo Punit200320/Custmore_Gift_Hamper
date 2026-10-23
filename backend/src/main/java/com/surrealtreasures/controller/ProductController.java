@@ -54,9 +54,9 @@ public class ProductController {
     }
 
     /**
-     * GET /api/products/{id}: Returns complete transparency details for a specific product.
+     * GET /api/products/{id} and /api/products/{id}/transparency: Returns complete transparency details for a specific product.
      */
-    @GetMapping("/{id}")
+    @GetMapping({ "/{id}", "/{id}/transparency" })
     public ResponseEntity<ProductTransparencyDTO> getProductById(@PathVariable String id) {
         return productService.getProductTransparencyById(id)
                 .map(ResponseEntity::ok)

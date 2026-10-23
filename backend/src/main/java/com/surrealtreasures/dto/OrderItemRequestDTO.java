@@ -24,7 +24,7 @@ public class OrderItemRequestDTO {
 
     public OrderItemRequestDTO(String productId, Integer quantity) {
         this.productId = productId;
-        this.quantity = quantity != null && quantity > 0 ? quantity : 1;
+        this.quantity = quantity;
     }
 
     public OrderItemRequestDTO(String productId, Integer quantity,
@@ -32,7 +32,7 @@ public class OrderItemRequestDTO {
                                java.math.BigDecimal heightCm, java.math.BigDecimal volumeCm3,
                                java.math.BigDecimal weightGrams) {
         this.productId = productId;
-        this.quantity = quantity != null && quantity > 0 ? quantity : 1;
+        this.quantity = quantity;
         this.lengthCm = lengthCm;
         this.widthCm = widthCm;
         this.heightCm = heightCm;

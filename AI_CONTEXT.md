@@ -370,4 +370,39 @@ interface Enquiry {
 
 ---
 
-*Last Updated: Step 4 — Warehouse Order Slip and Structured JSON Export*
+## 11. End-to-End Testing & Integration Verification (Step 5)
+
+### A. Automated Test Coverage (72 Tests, 100% Passing)
+- **Unit & Service Tests**:
+  - `HamperRecommendationServiceTest`: 13 tests verifying knapsack optimization, budget caps, allergen filtering, and skin-type suitability.
+  - `CorporateQuotationServiceTest`: 9 tests verifying real unit cost arithmetic, HALF_UP rounding, gross margins, and snapshot immutability.
+  - `ProductServiceTest`: 4 tests verifying transparency fact disclosures, explicit unverified/unknown flags, and non-medical boundaries.
+  - `OrderServiceTest`: 13 tests verifying order confirmation, inventory deductions, stock/allergen/budget revalidation, and warehouse packing slip generation.
+- **Safety Invariant Verification (`AllergySafetyInvariantTest`)**:
+  - 4 tests proving declared allergens are strictly excluded, unverified ingredients are never falsely marked safe, and external AI suggestions cannot override deterministic safety checks.
+- **Controller API & Validation Tests**:
+  - `CorporateQuotationControllerTest`: 6 tests including malformed requests, negative quantities, and negative budgets.
+  - `OrderControllerTest`: 5 tests verifying POST /api/orders, GET /api/orders/{id}, and GET /api/orders/{id}/packing-slip.
+  - `RecommendationControllerTest`: 2 tests verifying budget validation and tier responses.
+  - `ProductControllerTest`: 4 tests verifying category filters, transparency endpoints, and eligibility diagnostics.
+  - `HealthControllerTest`: 1 healthcheck test.
+  - `SurrealTreasuresApplicationTests`: 1 context load test.
+- **Cross-Origin & Integration Verification**:
+  - `CorsIntegrationTest`: 2 tests verifying preflight headers and origin allowlists.
+  - `OpenRouterClientTest`: 3 tests verifying safe deterministic fallback without requiring external API keys.
+  - `EndToEndIntegrationTest`: 5 comprehensive multi-step integration tests validating the complete user journey: Catalogue -> Recommendation -> Corporate Quote -> Order -> Packing Slip -> Negative API Rejections.
+
+### B. Database Isolation
+- Test execution strictly uses an isolated in-memory H2 database with PostgreSQL compatibility mode (`jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL`) and `ddl-auto: create-drop`. The developer's live PostgreSQL database is never touched, reset, or modified during test runs.
+
+### C. Live AI Smoke Test Instructions
+- Automated tests mock `OpenRouterClient` and use deterministic fallback.
+- To perform a live OpenRouter smoke test:
+  1. Set environment variable: `export OPENROUTER_API_KEY="your-live-openrouter-key"`
+  2. Start backend: `mvn spring-boot:run`
+  3. Verify logs for model invocation: `Calling OpenRouter model meta-llama/llama-3.3-70b-instruct:free`.
+
+---
+
+*Last Updated: Step 5 — End-to-End Testing and Integration Verification*
+
