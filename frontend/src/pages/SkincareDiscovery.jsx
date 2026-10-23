@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import AnimatedPage from '../components/AnimatedPage';
+import { wizardStepVariants, wizardStepVariantsReduced, wizardStepTransition, staggerContainer, staggerItem, staggerItemReduced } from '../utils/animations';
 import { useSelections } from '../context/SelectionContext';
 import ProductDetailModal from '../components/ProductDetailModal';
 import {
@@ -73,7 +76,12 @@ export default function SkincareDiscovery() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const shouldReduceMotion = useReducedMotion();
+  const stepAnim = shouldReduceMotion ? wizardStepVariantsReduced : wizardStepVariants;
+  const itemAnim = shouldReduceMotion ? staggerItemReduced : staggerItem;
+
   return (
+    <AnimatedPage>
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
       {/* Page Header with Welcome Introduction */}
       <div className="text-center max-w-2xl mx-auto space-y-3">
@@ -127,8 +135,17 @@ export default function SkincareDiscovery() {
       )}
 
       {/* STEP 1: CATEGORY & TEXTURE */}
+      <AnimatePresence mode="wait">
       {currentStep === 1 && (
-        <div className="max-w-3xl mx-auto bg-white rounded-3xl p-6 sm:p-10 border border-[#E8DEC9] shadow-md space-y-8 animate-fade-in">
+        <motion.div
+          key="skincare-step-1"
+          variants={stepAnim}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={wizardStepTransition}
+          className="max-w-3xl mx-auto bg-white rounded-3xl p-6 sm:p-10 border border-[#E8DEC9] shadow-md space-y-8"
+        >
           <div>
             <h2 className="font-serif text-2xl font-semibold text-[#3D2C1F]">
               Step 1: Category & Preferred Texture
@@ -206,12 +223,20 @@ export default function SkincareDiscovery() {
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* STEP 2: FRAGRANCE & INGREDIENT PREFERENCES */}
       {currentStep === 2 && (
-        <div className="max-w-3xl mx-auto bg-white rounded-3xl p-6 sm:p-10 border border-[#E8DEC9] shadow-md space-y-8 animate-fade-in">
+        <motion.div
+          key="skincare-step-2"
+          variants={stepAnim}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={wizardStepTransition}
+          className="max-w-3xl mx-auto bg-white rounded-3xl p-6 sm:p-10 border border-[#E8DEC9] shadow-md space-y-8"
+        >
           <div>
             <h2 className="font-serif text-2xl font-semibold text-[#3D2C1F]">
               Step 2: Fragrance & Botanical Ingredients
@@ -349,12 +374,20 @@ export default function SkincareDiscovery() {
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* STEP 3: FORMAT & BUDGET */}
       {currentStep === 3 && (
-        <div className="max-w-3xl mx-auto bg-white rounded-3xl p-6 sm:p-10 border border-[#E8DEC9] shadow-md space-y-8 animate-fade-in">
+        <motion.div
+          key="skincare-step-3"
+          variants={stepAnim}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={wizardStepTransition}
+          className="max-w-3xl mx-auto bg-white rounded-3xl p-6 sm:p-10 border border-[#E8DEC9] shadow-md space-y-8"
+        >
           <div>
             <h2 className="font-serif text-2xl font-semibold text-[#3D2C1F]">
               Step 3: Container Format & Budget
@@ -432,12 +465,18 @@ export default function SkincareDiscovery() {
               <span>Discover Matched Products</span>
             </button>
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* STEP 4: RESULTS CARDS */}
       {hasSubmitted && (
-        <div className="space-y-8 animate-fade-in">
+        <motion.div
+          initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+          className="space-y-8"
+        >
           {/* Active criteria bar */}
           <div className="flex flex-col sm:flex-row items-center justify-between bg-[#FAF6EE] p-5 rounded-2xl border border-[#E7DCB8] gap-4">
             <div className="text-xs text-[#4A3728]">
@@ -461,10 +500,16 @@ export default function SkincareDiscovery() {
 
           {/* Results Grid */}
           {results.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {results.map(({ product, score, matchReasons }) => (
-                <div
+            <motion.div
+              variants={staggerContainer}
+              initial="initial"
+              animate="animate"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+            >
+              {results.map(({ product, score, matchReasons }, idx) => (
+                <motion.div
                   key={product.id}
+                  variants={itemAnim}
                   className="bg-white rounded-3xl border border-[#E5DAC9] shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden"
                 >
                   <div>
@@ -567,9 +612,9 @@ export default function SkincareDiscovery() {
                       <span>Add to Selections</span>
                     </button>
                   </div>
-                </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           ) : (
             <div className="text-center py-16 px-4 bg-white rounded-3xl border border-[#E5DAC9] max-w-2xl mx-auto space-y-4">
               <Compass className="w-12 h-12 text-[#C86D51] mx-auto" />
@@ -595,16 +640,19 @@ export default function SkincareDiscovery() {
               </button>
             </div>
           )}
-        </div>
+        </motion.div>
       )}
 
       {/* Product Detail Modal */}
-      {selectedProductForModal && (
-        <ProductDetailModal
-          product={selectedProductForModal}
-          onClose={() => setSelectedProductForModal(null)}
-        />
-      )}
+      <AnimatePresence>
+        {selectedProductForModal && (
+          <ProductDetailModal
+            product={selectedProductForModal}
+            onClose={() => setSelectedProductForModal(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
+    </AnimatedPage>
   );
 }

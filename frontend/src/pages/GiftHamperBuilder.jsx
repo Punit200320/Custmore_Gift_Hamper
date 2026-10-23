@@ -1,63 +1,170 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import AnimatedPage from "../components/AnimatedPage";
+import React, { useState, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useSelections } from '../context/SelectionContext';
 import {
+  HAMPER_SIZES,
+  PACKAGING_OPTIONS,
   OCCASIONS,
   GIFTING_STYLES,
-  BUDGET_RANGES,
-  PACKAGING_OPTIONS,
-  CARD_TEMPLATES
+  BUDGET_RANGES
 } from '../data/demoProducts';
 import {
-  generateHamperRecommendations,
-  getBudgetFriendlyAlternatives,
   generateValueHampers,
+  generateHamperRecommendations,
   COMMON_ALLERGENS,
   checkProductAllergyStatus
 } from '../services/recommendationService';
+import Hamper2DVisualizer from '../components/Hamper2DVisualizer';
+import CelebrationCard2DVisualizer from '../components/CelebrationCard2DVisualizer';
 import {
-  Sparkles,
-  Gift,
   ArrowRight,
   ArrowLeft,
-  Check,
   Plus,
+  Minus,
+  Upload,
+  ShoppingBag,
   Trash2,
-  Package,
-  Heart,
+  Check,
   Sliders,
   DollarSign,
-  Info,
-  ShoppingBag,
-  RotateCcw,
-  Tag,
-  PenTool,
   ShieldCheck,
-  AlertTriangle,
+  ShieldAlert,
+  Package,
+  Info,
   X,
-  CheckCircle2,
-  CheckSquare,
-  Square,
-  ShieldAlert
+  Palette,
+  HeartHandshake
 } from 'lucide-react';
+
+const createHamperUniqueId = (prefix) => `${prefix}-${Date.now()}`;
 
 export default function GiftHamperBuilder() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { products, addHamperToCart } = useSelections();
 
-  // Mode switcher: 'value' (Value Hamper Mode) or 'wizard' (Occasion Wizard)
-  const [builderMode, setBuilderMode] = useState(
-    searchParams.get('mode') === 'wizard' ? 'wizard' : 'value'
+  // Top Mode Switcher: 'studio' (2D Hamper Studio) | 'value' (Value Hamper Mode) | 'wizard' (Occasion Wizard)
+  const initialMode = searchParams.get('mode') === 'value'
+    ? 'value'
+    : searchParams.get('mode') === 'wizard' || searchParams.get('occasion')
+    ? 'wizard'
+    : 'studio';
+
+  const [builderMode, setBuilderMode] = useState(initialMode);
+
+  // Available catalog products for hampers (excluding hampers and raw packaging)
+  const availableCatalogProducts = useMemo(() => {
+    return products.filter(
+      (p) => p.available && p.category !== 'Gift Hampers' && p.category !== 'Gift Packaging'
+    );
+  }, [products]);
+
+  // =========================================================================
+  // --- 1. INTERACTIVE 2D STUDIO STATE ---
+  // =========================================================================
+  // Active Tab in Studio: 'hamper' | 'card' | 'review'
+  const [activeTab, setActiveTab] = useState('hamper');
+
+  // Hamper Configuration
+  const [hamperSize, setHamperSize] = useState(() => {
+    const customizeId = searchParams.get('customize');
+    if (customizeId) {
+      const ready = products.find((p) => p.id === customizeId);
+      if (ready && ready.includedProductIds) {
+        const count = ready.includedProductIds.filter((id) => !id.startsWith('pkg-')).length;
+        if (count <= 3) return HAMPER_SIZES[0];
+        if (count <= 5) return HAMPER_SIZES[1];
+        if (count <= 8) return HAMPER_SIZES[2];
+        return HAMPER_SIZES[3];
+      }
+    }
+    return HAMPER_SIZES[1];
+  });
+
+  const [selectedPackaging, setSelectedPackaging] = useState(() => {
+    const customizeId = searchParams.get('customize');
+    if (customizeId) {
+      const ready = products.find((p) => p.id === customizeId);
+      if (ready && ready.includedProductIds) {
+        const pkgMatch = PACKAGING_OPTIONS.find((pkg) =>
+          ready.includedProductIds.includes(pkg.id)
+        );
+        if (pkgMatch) return pkgMatch;
+      }
+    }
+    return PACKAGING_OPTIONS[0];
+  });
+
+  const [selectedItems, setSelectedItems] = useState(() => {
+    const customizeId = searchParams.get('customize');
+    if (customizeId) {
+      const ready = products.find((p) => p.id === customizeId);
+      if (ready && ready.includedProductIds) {
+        return products
+          .filter((p) => ready.includedProductIds.includes(p.id) && !p.id.startsWith('pkg-'))
+          .map((p) => ({
+            id: p.id,
+            name: p.name,
+            price: p.price,
+            imageUrl: p.imageUrl,
+            quantity: 1
+          }));
+      }
+    }
+    const avail = products.filter(
+      (p) => p.available && p.category !== 'Gift Hampers' && p.category !== 'Gift Packaging'
+    );
+    return avail.slice(0, 3).map((p) => ({
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      imageUrl: p.imageUrl,
+      quantity: 1
+    }));
+  });
+
+  const [productCategoryFilter, setProductCategoryFilter] = useState('All');
+
+  // Celebration Card
+  const [cardPhoto, setCardPhoto] = useState(null);
+  const [celebrationTitle, setCelebrationTitle] = useState('Warmest Wishes');
+  const [cardRecipient, setCardRecipient] = useState('');
+  const [cardSender, setCardSender] = useState('');
+  const [cardMessage, setCardMessage] = useState(
+    'Wishing you radiant joy, abundant blessings, and peaceful moments.'
   );
 
-  // --- VALUE HAMPER MODE STATE ---
+  const currentTotalItemCount = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
+  const maxCapacity = hamperSize?.maxItems || 5;
+
+  // Filtered products in studio
+  const filteredStudioProducts = useMemo(() => {
+    if (productCategoryFilter === 'All') return availableCatalogProducts;
+    return availableCatalogProducts.filter((p) => p.category === productCategoryFilter);
+  }, [availableCatalogProducts, productCategoryFilter]);
+
+  // Categories list for Studio product picker
+  const studioCategories = useMemo(() => {
+    const cats = new Set(availableCatalogProducts.map((p) => p.category));
+    return ['All', ...Array.from(cats)];
+  }, [availableCatalogProducts]);
+
+  // Pricing for Studio
+  const productsSubtotal = selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const packagingPrice = selectedPackaging?.price || 0;
+  const cardPrice = 199;
+  const totalPrice = productsSubtotal + packagingPrice + cardPrice;
+
+  // =========================================================================
+  // --- 2. VALUE HAMPER MODE STATE ---
+  // =========================================================================
   const [valueBudget, setValueBudget] = useState(2000);
   const [customValueBudgetInput, setCustomValueBudgetInput] = useState('2000');
   const [selectedAllergens, setSelectedAllergens] = useState([]);
   const [customAllergenInput, setCustomAllergenInput] = useState('');
   const [valuePackagingId, setValuePackagingId] = useState('');
-  const [valueIncludeCard, setValueIncludeCard] = useState(false);
+  const [valueIncludeCard, setValueIncludeCard] = useState(true);
   const [addedHamperTierId, setAddedHamperTierId] = useState(null);
 
   const BUDGET_PRESETS = [1000, 1500, 2000, 2500, 3000, 4000];
@@ -107,9 +214,157 @@ export default function GiftHamperBuilder() {
     });
   }, [valueBudget, selectedAllergens, valuePackagingId, valueIncludeCard, products]);
 
+  // =========================================================================
+  // --- 3. OCCASION WIZARD STATE ---
+  // =========================================================================
+  const [wizardStep, setWizardStep] = useState(1);
+  const [wizardOccasion, setWizardOccasion] = useState(searchParams.get('occasion') || 'Birthday');
+  const [recipientRelationship, setRecipientRelationship] = useState('Best Friend');
+  const [wizardCategories, setWizardCategories] = useState(['Handmade Skincare', 'Bath and Body']);
+  const [wizardStyle, setWizardStyle] = useState('Self-Care and Wellness');
+  const [wizardBudgetRange, setWizardBudgetRange] = useState('1000-2000');
+  const [wizardCustomMin, setWizardCustomMin] = useState(1000);
+  const [wizardCustomMax, setWizardCustomMax] = useState(2500);
+  const [wizardRecommendations, setWizardRecommendations] = useState([]);
+
+  const getWizardBudgetBounds = () => {
+    if (wizardBudgetRange === 'custom') {
+      return { min: Number(wizardCustomMin) || 500, max: Number(wizardCustomMax) || 3000 };
+    }
+    const found = BUDGET_RANGES.find((b) => b.id === wizardBudgetRange);
+    return { min: found?.min || 1000, max: found?.max || 2000 };
+  };
+
+  const handleGenerateWizard = () => {
+    const { min, max } = getWizardBudgetBounds();
+    const results = generateHamperRecommendations({
+      occasion: wizardOccasion,
+      recipientRelationship,
+      preferredCategories: wizardCategories,
+      style: wizardStyle,
+      budgetMin: min,
+      budgetMax: max,
+      products
+    });
+    setWizardRecommendations(results);
+    setWizardStep(5);
+  };
+
+  // Helper to load any combination directly into 2D Studio
+  const loadIntoStudio = (items, packaging, occasionName = 'Custom Hamper') => {
+    const totalCount = items.reduce((s, i) => s + (i.quantity || 1), 0);
+    // Find matching size
+    let matchedSize = HAMPER_SIZES[1];
+    if (totalCount <= 3) matchedSize = HAMPER_SIZES[0];
+    else if (totalCount <= 5) matchedSize = HAMPER_SIZES[1];
+    else if (totalCount <= 8) matchedSize = HAMPER_SIZES[2];
+    else matchedSize = HAMPER_SIZES[3];
+
+    setHamperSize(matchedSize);
+    if (packaging) {
+      const pkgMatch = PACKAGING_OPTIONS.find((p) => p.id === packaging.id) || packaging;
+      setSelectedPackaging(pkgMatch);
+    }
+    setSelectedItems(
+      items.map((it) => ({
+        id: it.id,
+        name: it.name,
+        price: it.price,
+        imageUrl: it.imageUrl,
+        quantity: it.quantity || 1
+      }))
+    );
+    setCelebrationTitle(occasionName);
+    setBuilderMode('studio');
+    setActiveTab('hamper');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Product Selection Handlers for Studio
+  const handleAddItem = (product) => {
+    if (currentTotalItemCount >= maxCapacity) return;
+
+    setSelectedItems((prev) => {
+      const existing = prev.find((item) => item.id === product.id);
+      if (existing) {
+        return prev.map((item) =>
+          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      }
+      return [
+        ...prev,
+        {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          imageUrl: product.imageUrl,
+          quantity: 1
+        }
+      ];
+    });
+  };
+
+  const handleDecreaseItem = (productId) => {
+    setSelectedItems((prev) =>
+      prev
+        .map((item) => {
+          if (item.id === productId) {
+            const nextQty = item.quantity - 1;
+            return nextQty > 0 ? { ...item, quantity: nextQty } : null;
+          }
+          return item;
+        })
+        .filter(Boolean)
+    );
+  };
+
+  const handleRemoveItem = (productId) => {
+    setSelectedItems((prev) => prev.filter((item) => item.id !== productId));
+  };
+
+  // Photo Upload Handler
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCardPhoto(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Save to Cart from 2D Studio
+  const handleSaveStudioHamperToCart = () => {
+    if (selectedItems.length === 0) return;
+
+    addHamperToCart({
+      id: createHamperUniqueId('custom-hamper'),
+      name: `${hamperSize.name} ${selectedPackaging.name}`,
+      occasion: celebrationTitle || 'Custom Hamper',
+      packaging: selectedPackaging,
+      hamperSize: hamperSize.name,
+      products: selectedItems,
+      celebrationCard: {
+        photo: cardPhoto,
+        title: celebrationTitle,
+        message: cardMessage,
+        recipient: cardRecipient,
+        sender: cardSender
+      },
+      cardMessage,
+      recipientName: cardRecipient,
+      senderName: cardSender,
+      totalPrice
+    });
+
+    navigate('/selections');
+  };
+
+  // Add directly from Value Hamper Mode
   const handleSelectValueHamper = (hamper) => {
     addHamperToCart({
-      id: `value-${hamper.tierId}-${Date.now()}`,
+      id: createHamperUniqueId(`value-${hamper.tierId}`),
       name: `${hamper.tierName} (${hamper.subtitle})`,
       occasion: 'Value Hamper Selection',
       style:
@@ -121,7 +376,7 @@ export default function GiftHamperBuilder() {
       packaging: hamper.packaging,
       products: hamper.products,
       cardMessage: valueIncludeCard
-        ? 'Wishing you abundant joy, peace, and blissful pampering on your special day!'
+        ? 'Wishing you radiant joy, abundant blessings, and peaceful moments.'
         : '',
       recipientName: '',
       senderName: '',
@@ -134,332 +389,644 @@ export default function GiftHamperBuilder() {
     }, 3000);
   };
 
-  const handleCustomizeValueHamper = (hamper) => {
-    setActiveHamper({
-      id: `customized-value-${hamper.tierId}-${Date.now()}`,
-      name: `${hamper.tierName} (${hamper.subtitle})`,
-      occasion: 'Value Hamper',
-      style:
-        hamper.tierId === 'premium'
-          ? 'Luxury'
-          : hamper.tierId === 'budget'
-          ? 'Minimal and Elegant'
-          : 'Self-Care and Wellness',
+  // Add directly from Occasion Wizard
+  const handleSelectWizardHamper = (hamper) => {
+    addHamperToCart({
+      id: createHamperUniqueId('wizard'),
+      name: hamper.name,
+      occasion: hamper.occasion,
+      style: hamper.style,
       packaging: hamper.packaging,
       products: hamper.products.map((p) => ({
         id: p.id,
         name: p.name,
         price: p.price,
         imageUrl: p.imageUrl,
-        category: p.category,
-        quantity: p.quantity || 1
-      })),
-      totalPrice: hamper.totalPrice
-    });
-    setCurrentStep(6);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // --- OCCASION WIZARD STATE ---
-  // Wizard state: 1 (Occasion), 2 (Recipient), 3 (Budget), 4 (Style), 5 (Recommendations), 6 (Customize)
-  const [currentStep, setCurrentStep] = useState(1);
-
-  // Form selections
-  const [occasion, setOccasion] = useState(searchParams.get('occasion') || 'Birthday');
-  const [recipientRelationship, setRecipientRelationship] = useState('Best Friend');
-  const [preferredCategories, setPreferredCategories] = useState(['Handmade Skincare', 'Bath and Body']);
-  const [themeColor, setThemeColor] = useState('Earthy Sage & Botanical');
-  const [fragrancePref, setFragrancePref] = useState('French Lavender & Roman Chamomile');
-  const [personalInterests, setPersonalInterests] = useState('Wellness & Relaxation');
-
-  // Budget
-  const [selectedBudgetRange, setSelectedBudgetRange] = useState('1000-2000');
-  const [customBudgetMin, setCustomBudgetMin] = useState(1000);
-  const [customBudgetMax, setCustomBudgetMax] = useState(2500);
-
-  // Style
-  const [style, setStyle] = useState('Self-Care and Wellness');
-
-  // Generated recommendations
-  const [recommendations, setRecommendations] = useState([]);
-  const [hasGenerated, setHasGenerated] = useState(false);
-
-  // Customization active hamper state (Step 6)
-  const [activeHamper, setActiveHamper] = useState(null);
-  const [customCardMessage, setCustomCardMessage] = useState(
-    'Wishing you abundant joy, peace, and blissful pampering on your special day!'
-  );
-  const [cardRecipient, setCardRecipient] = useState('');
-  const [cardSender, setCardSender] = useState('');
-  const [cardTemplate, setCardTemplate] = useState('gold-botanical');
-
-  // Catalog item picker drawer during customization
-  const [showItemPicker, setShowItemPicker] = useState(false);
-
-  // Handle URL param shortcuts
-  useEffect(() => {
-    const occParam = searchParams.get('occasion');
-    if (occParam) {
-      setOccasion(occParam);
-    }
-    const customizeId = searchParams.get('customize');
-    if (customizeId) {
-      const found = products.find((p) => p.id === customizeId);
-      if (found) {
-        initCustomizationFromProduct(found);
-      }
-    }
-  }, [searchParams, products]);
-
-  // Budget min and max resolver
-  const getActiveBudgetBounds = () => {
-    if (selectedBudgetRange === 'custom') {
-      return { min: Number(customBudgetMin) || 500, max: Number(customBudgetMax) || 3000 };
-    }
-    const found = BUDGET_RANGES.find((b) => b.id === selectedBudgetRange);
-    return { min: found?.min || 1000, max: found?.max || 2000 };
-  };
-
-  // Run transparent recommendation engine
-  const handleGenerateRecommendations = () => {
-    const { min, max } = getActiveBudgetBounds();
-    const results = generateHamperRecommendations({
-      occasion,
-      recipientRelationship,
-      preferredCategories,
-      style,
-      budgetMin: min,
-      budgetMax: max,
-      products
-    });
-    setRecommendations(results);
-    setHasGenerated(true);
-    setCurrentStep(5);
-  };
-
-  // Transition to Step 6 Customization
-  const handleCustomizeHamper = (hamper) => {
-    setActiveHamper({
-      id: hamper.id || `custom-hamper-${Date.now()}`,
-      name: hamper.name,
-      occasion: hamper.occasion || occasion,
-      style: hamper.style || style,
-      packaging: hamper.packaging || PACKAGING_OPTIONS[0],
-      products: hamper.products.map((p) => ({
-        id: p.id,
-        name: p.name,
-        price: p.price,
-        imageUrl: p.imageUrl,
-        category: p.category,
         quantity: 1
       })),
+      cardMessage: 'Wishing you abundant blessings and radiant joy on this special occasion.',
+      recipientName: '',
+      senderName: '',
+      cardTemplate: 'gold-botanical',
       totalPrice: hamper.totalPrice
     });
-    setCurrentStep(6);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // Initialize customization from ready-made hamper
-  const initCustomizationFromProduct = (readyHamper) => {
-    const items = readyHamper.includedProductIds
-      ? products.filter((p) => readyHamper.includedProductIds.includes(p.id))
-      : products.slice(0, 3);
-
-    const packaging =
-      PACKAGING_OPTIONS.find((pkg) =>
-        readyHamper.includedProductIds?.find((id) => id.startsWith('pkg-'))
-      ) || PACKAGING_OPTIONS[0];
-
-    const hamperItems = items
-      .filter((i) => !i.id.startsWith('pkg-'))
-      .map((p) => ({
-        id: p.id,
-        name: p.name,
-        price: p.price,
-        imageUrl: p.imageUrl,
-        category: p.category,
-        quantity: 1
-      }));
-
-    const cardPrice = 199;
-    const computedTotal =
-      hamperItems.reduce((s, i) => s + i.price * i.quantity, 0) + packaging.price + cardPrice;
-
-    setActiveHamper({
-      id: `customized-${readyHamper.id}-${Date.now()}`,
-      name: readyHamper.name,
-      occasion: readyHamper.occasionFit?.[0] || 'Celebration',
-      style: readyHamper.style || 'Luxury',
-      packaging,
-      products: hamperItems,
-      totalPrice: computedTotal
-    });
-    setCurrentStep(6);
-  };
-
-  // Step 6 Customization Modifiers
-  const updateHamperItemQty = (productId, delta) => {
-    if (!activeHamper) return;
-    const updated = activeHamper.products
-      .map((item) => {
-        if (item.id === productId) {
-          const newQty = item.quantity + delta;
-          return newQty > 0 ? { ...item, quantity: newQty } : null;
-        }
-        return item;
-      })
-      .filter(Boolean);
-
-    recalculateActiveHamper(updated, activeHamper.packaging);
-  };
-
-  const removeHamperItem = (productId) => {
-    if (!activeHamper) return;
-    const updated = activeHamper.products.filter((item) => item.id !== productId);
-    recalculateActiveHamper(updated, activeHamper.packaging);
-  };
-
-  const addProductToActiveHamper = (product) => {
-    if (!activeHamper) return;
-    const existing = activeHamper.products.find((p) => p.id === product.id);
-    let updated;
-    if (existing) {
-      updated = activeHamper.products.map((p) =>
-        p.id === product.id ? { ...p, quantity: p.quantity + 1 } : p
-      );
-    } else {
-      updated = [
-        ...activeHamper.products,
-        {
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          imageUrl: product.imageUrl,
-          category: product.category,
-          quantity: 1
-        }
-      ];
-    }
-    recalculateActiveHamper(updated, activeHamper.packaging);
-    setShowItemPicker(false);
-  };
-
-  const changePackaging = (pkg) => {
-    if (!activeHamper) return;
-    recalculateActiveHamper(activeHamper.products, pkg);
-  };
-
-  const recalculateActiveHamper = (itemsList, packaging) => {
-    const cardPrice = 199;
-    const itemsSum = itemsList.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
-    const newTotal = itemsSum + (packaging?.price || 0) + cardPrice;
-    setActiveHamper((prev) => ({
-      ...prev,
-      products: itemsList,
-      packaging,
-      totalPrice: newTotal
-    }));
-  };
-
-  // Save customized hamper to selections cart
-  const handleSaveAndContinueToSelections = () => {
-    if (!activeHamper || activeHamper.products.length === 0) return;
-
-    addHamperToCart({
-      id: activeHamper.id,
-      name: activeHamper.name,
-      occasion: activeHamper.occasion,
-      style: activeHamper.style,
-      packaging: activeHamper.packaging,
-      products: activeHamper.products,
-      cardMessage: customCardMessage,
-      recipientName: cardRecipient,
-      senderName: cardSender,
-      cardTemplate,
-      totalPrice: activeHamper.totalPrice
-    });
-
     navigate('/selections');
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-      {/* Header & Breadcrumb */}
-      <div className="text-center max-w-2xl mx-auto space-y-2">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EAE2D5] text-xs font-semibold text-[#556B52]">
-          <Gift className="w-3.5 h-3.5 text-[#D4AF37]" />
-          <span>Interactive Hamper Studio</span>
+    <AnimatedPage>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
+      {/* Header & Mode Switcher */}
+      <div className="text-center max-w-2xl mx-auto space-y-3">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF3EA] border border-[#E8DEC9] text-xs font-semibold text-[#556B52]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#556B52]"></span>
+          <span>Bespoke Gifting Studio</span>
         </div>
         <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold text-[#3D2C1F]">
-          {currentStep === 6
-            ? 'Customise Your Selected Hamper'
+          {builderMode === 'studio'
+            ? 'Interactive Hamper Studio'
             : builderMode === 'value'
             ? 'Value Hamper Mode'
-            : 'Personalised Gift Hamper Builder'}
+            : 'Occasion Gifting Wizard'}
         </h1>
-        <p className="text-sm text-[#7A6A5A]">
-          {currentStep === 6
-            ? 'Adjust quantities, swap botanical formulations, pick luxury packaging, and compose a calligraphed wish note.'
+        <p className="text-xs sm:text-sm text-[#7A6A5A]">
+          {builderMode === 'studio'
+            ? 'Design your keepsake hamper with live 2D box visualization, custom capacity, and calligraphed celebration card.'
             : builderMode === 'value'
-            ? 'Select your budget and allergy preferences. Our transparent engine instantly generates 3 curated options (Budget, Balanced, and Premium) with verified in-stock items and included packaging.'
-            : 'Configure your preferences in a few thoughtful steps. Our transparent engine assembles real combinations within your budget.'}
+            ? 'Set your budget ceiling and botanical sensitivity filters. Our transparent engine curates 3 guaranteed under-budget options.'
+            : 'Let our guided wizard recommend the ideal pairing for your special milestone, recipient, and gifting aesthetic.'}
         </p>
-      </div>
 
-      {/* Mode Selector Tabs (when not in Step 6 customisation) */}
-      {currentStep !== 6 && (
-        <div className="flex justify-center max-w-xl mx-auto">
-          <div className="bg-[#EFE8DD] p-1.5 rounded-full flex items-center gap-1 border border-[#DDD2C3] shadow-inner w-full">
+        {/* Top 3-Mode Switcher */}
+        <div className="pt-2 flex justify-center">
+          <div className="bg-[#FAF7F2] p-1.5 rounded-2xl flex items-center gap-1 border border-[#E8DEC9] shadow-xs max-w-xl w-full">
             <button
               type="button"
               onClick={() => {
-                setBuilderMode('value');
-                setCurrentStep(1);
+                setBuilderMode('studio');
+                setActiveTab('hamper');
               }}
-              className={`flex-1 py-3 px-4 rounded-full text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
-                builderMode === 'value'
-                  ? 'bg-[#556B52] text-white shadow-md'
-                  : 'text-[#6B5A4B] hover:text-[#3D2C1F]'
+              className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                builderMode === 'studio'
+                  ? 'bg-[#556B52] text-white shadow-xs'
+                  : 'text-[#6B5A4B] hover:text-[#3D2C1F] hover:bg-white/60'
               }`}
             >
-              <Sparkles className="w-4 h-4 text-[#E8C5B8]" />
-              <span>⚡ Value Hamper Mode</span>
-              <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] bg-white/20 rounded-full font-normal">
-                3 Options
-              </span>
+              <Palette className="w-3.5 h-3.5" />
+              <span>2D Studio</span>
             </button>
             <button
               type="button"
-              onClick={() => setBuilderMode('wizard')}
-              className={`flex-1 py-3 px-4 rounded-full text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
-                builderMode === 'wizard'
-                  ? 'bg-[#4A3728] text-white shadow-md'
-                  : 'text-[#6B5A4B] hover:text-[#3D2C1F]'
+              onClick={() => setBuilderMode('value')}
+              className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                builderMode === 'value'
+                  ? 'bg-[#556B52] text-white shadow-xs'
+                  : 'text-[#6B5A4B] hover:text-[#3D2C1F] hover:bg-white/60'
               }`}
             >
-              <Sliders className="w-4 h-4 text-[#D4AF37]" />
+              <DollarSign className="w-3.5 h-3.5" />
+              <span>Value Mode</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setBuilderMode('wizard');
+                setWizardStep(1);
+              }}
+              className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                builderMode === 'wizard'
+                  ? 'bg-[#556B52] text-white shadow-xs'
+                  : 'text-[#6B5A4B] hover:text-[#3D2C1F] hover:bg-white/60'
+              }`}
+            >
+              <Sliders className="w-3.5 h-3.5" />
               <span>Occasion Wizard</span>
-              <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] bg-white/20 rounded-full font-normal">
-                Step-by-Step
-              </span>
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* MODE 1: INTERACTIVE 2D STUDIO                                            */}
+      {/* ========================================================================= */}
+      {builderMode === 'studio' && (
+        <div className="space-y-6">
+          {/* Minimal 3 Tabs for Studio */}
+          <div className="flex justify-center">
+            <div className="inline-flex p-1 bg-[#FAF7F2] rounded-xl border border-[#E8DEC9] max-w-sm w-full">
+              <button
+                type="button"
+                onClick={() => setActiveTab('hamper')}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs transition-all ${
+                  activeTab === 'hamper'
+                    ? 'bg-white text-[#2D2A26] shadow-xs font-semibold'
+                    : 'text-[#7A6A5A] hover:text-[#2D2A26]'
+                }`}
+              >
+                1. Hamper
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('card')}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs transition-all ${
+                  activeTab === 'card'
+                    ? 'bg-white text-[#2D2A26] shadow-xs font-semibold'
+                    : 'text-[#7A6A5A] hover:text-[#2D2A26]'
+                }`}
+              >
+                2. Gift Card
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('review')}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs transition-all ${
+                  activeTab === 'review'
+                    ? 'bg-white text-[#2D2A26] shadow-xs font-semibold'
+                    : 'text-[#7A6A5A] hover:text-[#2D2A26]'
+                }`}
+              >
+                3. Review
+              </button>
+            </div>
+          </div>
+
+          {/* TAB 1: BUILD HAMPER (Split Layout with Live 2D Visualizer) */}
+          {activeTab === 'hamper' && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in">
+              {/* LEFT: 2D VISUALIZER & PRICE (Sticky) */}
+              <div className="lg:col-span-5 lg:sticky lg:top-24 space-y-4">
+                <Hamper2DVisualizer
+                  selectedPackaging={selectedPackaging}
+                  hamperSize={hamperSize}
+                  selectedProducts={selectedItems}
+                  onRemoveItem={handleRemoveItem}
+                  onSelectSlot={() => {
+                    const el = document.getElementById('products-section');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                />
+
+                {/* Price Box */}
+                <div className="bg-white p-5 rounded-2xl border border-[#EBE4D8] shadow-xs space-y-3">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-xs font-medium text-[#7A6A5A]">Estimated Total</span>
+                    <span className="font-serif text-2xl font-bold text-[#2D2A26]">
+                      ₹{totalPrice}
+                    </span>
+                  </div>
+
+                  <div className="text-xs text-[#7A6A5A] space-y-1.5 pt-2 border-t border-[#F2ECE1]">
+                    <div className="flex justify-between">
+                      <span>Products ({currentTotalItemCount}/{maxCapacity})</span>
+                      <span className="text-[#2D2A26] font-medium">₹{productsSubtotal}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>{selectedPackaging?.name}</span>
+                      <span className="text-[#2D2A26] font-medium">₹{packagingPrice}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Calligraphed Card & Wax Seal</span>
+                      <span className="text-[#2D2A26] font-medium">₹{cardPrice}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('card')}
+                    className="w-full mt-2 py-3 rounded-xl bg-[#2D231B] hover:bg-[#3D2F24] text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs"
+                  >
+                    <span>Continue to Gift Card</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* RIGHT: CONFIGURATION CONTROLS */}
+              <div className="lg:col-span-7 space-y-6">
+                {/* 1. Hamper Size */}
+                <div className="bg-white p-5 rounded-2xl border border-[#EBE4D8] shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-serif text-base font-bold text-[#2D2A26]">
+                      1. Hamper Size
+                    </h3>
+                    <span className="text-xs text-[#7A6A5A]">
+                      Capacity: {hamperSize.maxItems} items
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {HAMPER_SIZES.map((size) => {
+                      const isSelected = hamperSize.id === size.id;
+                      return (
+                        <button
+                          key={size.id}
+                          type="button"
+                          onClick={() => setHamperSize(size)}
+                          className={`p-3 rounded-xl border text-center transition-all ${
+                            isSelected
+                              ? 'border-[#556B52] bg-[#FAF3EA] text-[#556B52] font-semibold ring-1 ring-[#556B52]'
+                              : 'border-[#EBE4D8] bg-white text-[#4A3728] hover:bg-[#FAF7F2]'
+                          }`}
+                        >
+                          <div className="font-serif text-sm font-semibold">{size.name}</div>
+                          <div className="text-[11px] text-[#7A6A5A]">{size.label}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Packaging Box */}
+                <div className="bg-white p-5 rounded-2xl border border-[#EBE4D8] shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-serif text-base font-bold text-[#2D2A26]">
+                      2. Keepsake Packaging
+                    </h3>
+                    <span className="text-xs text-[#556B52] font-medium">
+                      {selectedPackaging?.name} (+₹{selectedPackaging?.price})
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {PACKAGING_OPTIONS.map((pkg) => {
+                      const isSelected = selectedPackaging?.id === pkg.id;
+                      return (
+                        <div
+                          key={pkg.id}
+                          onClick={() => setSelectedPackaging(pkg)}
+                          className={`cursor-pointer rounded-xl border overflow-hidden transition-all ${
+                            isSelected
+                              ? 'border-[#556B52] ring-1 ring-[#556B52]'
+                              : 'border-[#EBE4D8] hover:border-[#D5C7B4]'
+                          }`}
+                        >
+                          <div className="aspect-square bg-[#FAF7F2] overflow-hidden">
+                            <img
+                              src={pkg.imageUrl}
+                              alt={pkg.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="p-2.5 text-center bg-white">
+                            <div className="text-xs font-semibold text-[#2D2A26] truncate">
+                              {pkg.name}
+                            </div>
+                            <div className="text-[11px] text-[#7A6A5A]">₹{pkg.price}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 3. Product Selection Grid */}
+                <div id="products-section" className="bg-white p-5 rounded-2xl border border-[#EBE4D8] shadow-xs space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#F2ECE1]">
+                    <div>
+                      <h3 className="font-serif text-base font-bold text-[#2D2A26]">
+                        3. Select Artisan Formulations
+                      </h3>
+                      <p className="text-xs text-[#7A6A5A]">
+                        {currentTotalItemCount >= maxCapacity ? (
+                          <span className="text-[#C86D51] font-semibold">Hamper is at full capacity ({maxCapacity}/{maxCapacity} items)</span>
+                        ) : (
+                          <span>{maxCapacity - currentTotalItemCount} slot(s) remaining in this hamper</span>
+                        )}
+                      </p>
+                    </div>
+
+                    {/* Category Tabs */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {studioCategories.map((cat) => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setProductCategoryFilter(cat)}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
+                            productCategoryFilter === cat
+                              ? 'bg-[#556B52] text-white'
+                              : 'bg-[#FAF7F2] text-[#6B5A4B] hover:bg-[#F2ECE1]'
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Products Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-1">
+                    {filteredStudioProducts.map((product) => {
+                      const selectedItem = selectedItems.find((i) => i.id === product.id);
+                      const qty = selectedItem?.quantity || 0;
+                      const allergyStatus = checkProductAllergyStatus(product, selectedAllergens);
+
+                      return (
+                        <div
+                          key={product.id}
+                          className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+                            qty > 0
+                              ? 'border-[#556B52] bg-[#FAF9F5]'
+                              : 'border-[#EBE4D8] bg-white hover:border-[#D5C7B4]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <img
+                              src={product.imageUrl}
+                              alt={product.name}
+                              className="w-12 h-12 rounded-lg object-cover bg-[#FAF7F2] shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <h4 className="text-xs font-semibold text-[#2D2A26] truncate">
+                                {product.name}
+                              </h4>
+                              <div className="text-[11px] text-[#7A6A5A]">
+                                ₹{product.price}
+                              </div>
+                              {selectedAllergens.length > 0 && allergyStatus.isConflict && (
+                                <span className="inline-block text-[10px] text-[#C86D51] font-semibold truncate max-w-[150px]">
+                                  {allergyStatus.conflictReason}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Stepper Controls */}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {qty > 0 ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDecreaseItem(product.id)}
+                                  className="w-7 h-7 rounded-lg border border-[#EBE4D8] bg-white hover:bg-[#FAF7F2] text-[#2D2A26] flex items-center justify-center transition-all"
+                                  title="Decrease quantity"
+                                >
+                                  <Minus className="w-3.5 h-3.5" />
+                                </button>
+                                <span className="w-5 text-center text-xs font-bold text-[#2D2A26]">
+                                  {qty}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddItem(product)}
+                                  disabled={currentTotalItemCount >= maxCapacity}
+                                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+                                    currentTotalItemCount >= maxCapacity
+                                      ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed'
+                                      : 'bg-[#556B52] text-white hover:bg-[#3E523B]'
+                                  }`}
+                                  title="Increase quantity"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleAddItem(product)}
+                                disabled={currentTotalItemCount >= maxCapacity}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                                  currentTotalItemCount >= maxCapacity
+                                    ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed'
+                                    : 'bg-[#FAF7F2] hover:bg-[#556B52] text-[#2D2A26] hover:text-white border border-[#EBE4D8]'
+                                }`}
+                              >
+                                + Add
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: CELEBRATION GIFT CARD */}
+          {activeTab === 'card' && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in">
+              <div className="lg:col-span-6 space-y-4 lg:sticky lg:top-24">
+                <CelebrationCard2DVisualizer
+                  cardPhoto={cardPhoto}
+                  celebrationTitle={celebrationTitle}
+                  cardMessage={cardMessage}
+                  cardRecipient={cardRecipient}
+                  cardSender={cardSender}
+                />
+              </div>
+
+              <div className="lg:col-span-6 bg-white p-6 rounded-2xl border border-[#EBE4D8] shadow-xs space-y-5">
+                <div className="pb-3 border-b border-[#F2ECE1]">
+                  <h3 className="font-serif text-lg font-bold text-[#2D2A26]">
+                    Personalise Your Celebration Card
+                  </h3>
+                  <p className="text-xs text-[#7A6A5A]">
+                    Every hamper includes a 300 GSM deckled cotton paper card, embossed gold foil, and hand-poured botanical wax seal.
+                  </p>
+                </div>
+
+                {/* Photo Upload */}
+                <div>
+                  <label className="block text-xs font-semibold text-[#4A3728] uppercase tracking-wider mb-1.5">
+                    Optional Celebration Photo
+                  </label>
+                  {cardPhoto ? (
+                    <div className="flex items-center gap-3 p-3 rounded-xl border border-[#EBE4D8] bg-[#FAF7F2]">
+                      <img
+                        src={cardPhoto}
+                        alt="Uploaded preview"
+                        className="w-12 h-12 rounded-lg object-cover"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-semibold text-[#2D2A26] block truncate">
+                          Celebration Photo Attached
+                        </span>
+                        <span className="text-[11px] text-[#7A6A5A]">Printed on fine matte photo card</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setCardPhoto(null)}
+                        className="p-1.5 text-neutral-400 hover:text-red-600 rounded-lg transition-colors"
+                        title="Remove photo"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="border border-dashed border-[#D5C7B4] hover:border-[#556B52] rounded-xl p-5 flex flex-col items-center justify-center text-center cursor-pointer bg-[#FAF7F2] hover:bg-white transition-all">
+                      <Upload className="w-5 h-5 text-[#8C7A6A] mb-1" />
+                      <span className="text-xs font-semibold text-[#2D2A26]">
+                        Upload Special Moment Photo
+                      </span>
+                      <span className="text-[11px] text-[#7A6A5A] mt-0.5">
+                        PNG or JPG (Will be printed and enclosed in envelope)
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {/* Title */}
+                <div>
+                  <label className="block text-xs font-semibold text-[#4A3728] uppercase tracking-wider mb-1">
+                    Occasion / Card Heading
+                  </label>
+                  <input
+                    type="text"
+                    value={celebrationTitle}
+                    onChange={(e) => setCelebrationTitle(e.target.value)}
+                    placeholder="e.g. Warmest Wishes, Happy Birthday, Wedding Blessings"
+                    className="w-full p-2.5 rounded-xl border border-[#EBE4D8] bg-[#FAF7F2] text-xs text-[#2D2A26] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#556B52]"
+                  />
+                </div>
+
+                {/* To & From */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#4A3728] uppercase tracking-wider mb-1">
+                      Recipient Name (To)
+                    </label>
+                    <input
+                      type="text"
+                      value={cardRecipient}
+                      onChange={(e) => setCardRecipient(e.target.value)}
+                      placeholder="e.g. Ananya"
+                      className="w-full p-2.5 rounded-xl border border-[#EBE4D8] bg-[#FAF7F2] text-xs text-[#2D2A26] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#556B52]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[#4A3728] uppercase tracking-wider mb-1">
+                      Sender Name (From)
+                    </label>
+                    <input
+                      type="text"
+                      value={cardSender}
+                      onChange={(e) => setCardSender(e.target.value)}
+                      placeholder="e.g. Rohan & Family"
+                      className="w-full p-2.5 rounded-xl border border-[#EBE4D8] bg-[#FAF7F2] text-xs text-[#2D2A26] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#556B52]"
+                    />
+                  </div>
+                </div>
+
+                {/* Message */}
+                <div>
+                  <label className="block text-xs font-semibold text-[#4A3728] uppercase tracking-wider mb-1">
+                    Heartfelt Calligraphed Message
+                  </label>
+                  <textarea
+                    rows="3"
+                    value={cardMessage}
+                    onChange={(e) => setCardMessage(e.target.value)}
+                    placeholder="Write your personal message..."
+                    className="w-full p-3 rounded-xl border border-[#EBE4D8] bg-[#FAF7F2] text-xs text-[#2D2A26] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#556B52]"
+                  />
+                </div>
+
+                {/* Nav */}
+                <div className="pt-2 flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('hamper')}
+                    className="px-4 py-2.5 rounded-xl border border-[#EBE4D8] text-[#4A3728] text-xs font-semibold flex items-center gap-1.5 hover:bg-[#FAF7F2] transition-colors"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back to Products</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('review')}
+                    className="px-5 py-2.5 rounded-xl bg-[#2D231B] hover:bg-[#3D2F24] text-white text-xs font-semibold flex items-center gap-1.5 transition-all"
+                  >
+                    <span>Review Hamper</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: REVIEW & FINALIZE */}
+          {activeTab === 'review' && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in">
+              <div className="lg:col-span-7 space-y-5">
+                <Hamper2DVisualizer
+                  selectedPackaging={selectedPackaging}
+                  hamperSize={hamperSize}
+                  selectedProducts={selectedItems}
+                  onRemoveItem={handleRemoveItem}
+                />
+
+                <CelebrationCard2DVisualizer
+                  cardPhoto={cardPhoto}
+                  celebrationTitle={celebrationTitle}
+                  cardMessage={cardMessage}
+                  cardRecipient={cardRecipient}
+                  cardSender={cardSender}
+                />
+              </div>
+
+              <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-24">
+                <div className="bg-white p-6 rounded-2xl border border-[#EBE4D8] shadow-xs space-y-4">
+                  <h3 className="font-serif text-lg font-bold text-[#2D2A26]">
+                    Keepsake Hamper Summary
+                  </h3>
+
+                  <div className="space-y-2 text-xs text-[#6B5A4B] border-y border-[#F2ECE1] py-3">
+                    {selectedItems.map((item) => (
+                      <div key={item.id} className="flex justify-between">
+                        <span className="truncate pr-2">
+                          {item.quantity}x {item.name}
+                        </span>
+                        <span className="font-medium text-[#2D2A26] shrink-0">
+                          ₹{item.price * item.quantity}
+                        </span>
+                      </div>
+                    ))}
+
+                    <div className="pt-2 border-t border-[#F2ECE1] space-y-1">
+                      <div className="flex justify-between">
+                        <span>{selectedPackaging?.name} ({hamperSize.name} Box)</span>
+                        <span className="font-medium text-[#2D2A26]">₹{packagingPrice}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Calligraphed Card & Wax Seal</span>
+                        <span className="font-medium text-[#2D2A26]">₹{cardPrice}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-baseline justify-between pt-1">
+                    <span className="text-xs text-[#7A6A5A]">Total Cost</span>
+                    <span className="font-serif text-3xl font-bold text-[#2D2A26]">
+                      ₹{totalPrice}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleSaveStudioHamperToCart}
+                      className="w-full py-3.5 rounded-xl bg-[#556B52] hover:bg-[#3E523B] text-white font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-xs"
+                    >
+                      <ShoppingBag className="w-4 h-4" />
+                      <span>Save Hamper to Selections</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('hamper')}
+                      className="w-full py-2.5 rounded-xl border border-[#EBE4D8] text-[#4A3728] text-xs font-semibold hover:bg-[#FAF7F2] transition-colors"
+                    >
+                      Make Adjustments
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* --- VALUE HAMPER MODE VIEW (Requirements 1, 2, 3, 4, 5, 6, 7, 8, 9) --- */}
+      {/* MODE 2: VALUE HAMPER MODE                                                */}
       {/* ========================================================================= */}
-      {builderMode === 'value' && currentStep !== 6 && (
-        <div className="space-y-10 animate-fade-in">
-          {/* Controls & Configuration Section */}
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8DEC9] shadow-md space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#F0E6D8] gap-2">
+      {builderMode === 'value' && (
+        <div className="space-y-8 animate-fade-in">
+          {/* Controls Box */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#EBE4D8] shadow-xs space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#F2ECE1] gap-2">
               <div>
                 <h2 className="font-serif text-xl sm:text-2xl font-bold text-[#3D2C1F] flex items-center gap-2">
                   <span>Smart Hamper Configuration</span>
                   <span className="text-xs font-sans font-semibold bg-[#FAF3EA] text-[#556B52] px-3 py-1 rounded-full border border-[#E8DEC9]">
-                    Strict Budget & Allergy Guard Active
+                    Strict Budget & Allergy Guard
                   </span>
                 </h2>
                 <p className="text-xs text-[#7A6A5A] mt-1">
@@ -467,22 +1034,20 @@ export default function GiftHamperBuilder() {
                 </p>
               </div>
 
-              {/* Guarantees Badges */}
               <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#556B52] font-medium">
-                <span className="flex items-center gap-1 bg-[#EAEFEA] px-2.5 py-1 rounded-full">
+                <span className="flex items-center gap-1 bg-[#FAF3EA] px-2.5 py-1 rounded-full border border-[#E8DEC9]">
                   <ShieldCheck className="w-3.5 h-3.5 text-[#556B52]" />
                   In-Stock Only
                 </span>
-                <span className="flex items-center gap-1 bg-[#EAEFEA] px-2.5 py-1 rounded-full">
+                <span className="flex items-center gap-1 bg-[#FAF3EA] px-2.5 py-1 rounded-full border border-[#E8DEC9]">
                   <Package className="w-3.5 h-3.5 text-[#556B52]" />
                   Packaging Included
                 </span>
               </div>
             </div>
 
-            {/* Grid of 2 Columns: 1 Budget, 2 Allergens */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              {/* Left Column: Budget Ceiling */}
+              {/* Left Column: Budget */}
               <div className="lg:col-span-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-[#4A3728] uppercase tracking-wider flex items-center gap-1.5">
@@ -494,7 +1059,7 @@ export default function GiftHamperBuilder() {
                   </span>
                 </div>
 
-                {/* Quick Presets */}
+                {/* Presets */}
                 <div className="grid grid-cols-3 gap-2">
                   {BUDGET_PRESETS.map((amount) => {
                     const isSelected = Number(valueBudget) === amount;
@@ -505,7 +1070,7 @@ export default function GiftHamperBuilder() {
                         onClick={() => handleBudgetPresetClick(amount)}
                         className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
                           isSelected
-                            ? 'bg-[#556B52] text-white border-[#556B52] shadow-sm'
+                            ? 'bg-[#556B52] text-white border-[#556B52] shadow-xs'
                             : 'bg-[#FAF7F2] text-[#4A3728] border-[#E8DEC9] hover:bg-[#F2ECE1]'
                         }`}
                       >
@@ -532,13 +1097,13 @@ export default function GiftHamperBuilder() {
                       value={customValueBudgetInput}
                       onChange={handleCustomBudgetChange}
                       placeholder="e.g. 1800"
-                      className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-[#D5C7B4] bg-[#FAF7F2] text-sm text-[#3D2C1F] focus:outline-none focus:ring-2 focus:ring-[#556B52]"
+                      className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-[#D5C7B4] bg-[#FAF7F2] text-sm text-[#3D2C1F] focus:outline-none focus:ring-1 focus:ring-[#556B52]"
                     />
                   </div>
                 </div>
 
-                {/* Packaging & Card Add-ons */}
-                <div className="pt-3 border-t border-[#F0E6D8] space-y-3">
+                {/* Packaging & Card */}
+                <div className="pt-3 border-t border-[#F2ECE1] space-y-3">
                   <div>
                     <label className="text-[11px] font-bold text-[#4A3728] uppercase tracking-wider block mb-1">
                       Packaging Preference
@@ -546,9 +1111,9 @@ export default function GiftHamperBuilder() {
                     <select
                       value={valuePackagingId}
                       onChange={(e) => setValuePackagingId(e.target.value)}
-                      className="w-full p-2.5 rounded-xl border border-[#D5C7B4] bg-[#FAF7F2] text-xs text-[#3D2C1F] focus:outline-none focus:ring-2 focus:ring-[#556B52]"
+                      className="w-full p-2.5 rounded-xl border border-[#D5C7B4] bg-[#FAF7F2] text-xs text-[#3D2C1F] focus:outline-none focus:ring-1 focus:ring-[#556B52]"
                     >
-                      <option value="">✨ Auto-Match by Tier (Recommended)</option>
+                      <option value="">Auto-Match by Tier (Recommended)</option>
                       {PACKAGING_OPTIONS.map((pkg) => (
                         <option key={pkg.id} value={pkg.id}>
                           {pkg.name} (+₹{pkg.price})
@@ -576,7 +1141,7 @@ export default function GiftHamperBuilder() {
                 </div>
               </div>
 
-              {/* Right Column: Allergy Restrictions & Safety Verification */}
+              {/* Right Column: Allergens */}
               <div className="lg:col-span-7 space-y-4">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-[#4A3728] uppercase tracking-wider flex items-center gap-1.5">
@@ -613,9 +1178,7 @@ export default function GiftHamperBuilder() {
                             : 'bg-[#FAF7F2] border-[#E8DEC9] text-[#5A4A3A] hover:bg-[#F2ECE1]'
                         }`}
                       >
-                        <span className="truncate">
-                          {allergen.icon} {allergen.label}
-                        </span>
+                        <span className="truncate">{allergen.label}</span>
                         {isSelected ? (
                           <X className="w-3.5 h-3.5 text-[#C86D51] shrink-0" />
                         ) : (
@@ -643,7 +1206,7 @@ export default function GiftHamperBuilder() {
                         }
                       }}
                       placeholder="e.g. Lavender, Rose, Saffron, Grapefruit, Soy"
-                      className="flex-1 px-3.5 py-2 rounded-xl border border-[#D5C7B4] bg-[#FAF7F2] text-xs text-[#3D2C1F] focus:outline-none focus:ring-2 focus:ring-[#556B52]"
+                      className="flex-1 px-3.5 py-2 rounded-xl border border-[#D5C7B4] bg-[#FAF7F2] text-xs text-[#3D2C1F] focus:outline-none focus:ring-1 focus:ring-[#556B52]"
                     />
                     <button
                       type="button"
@@ -682,26 +1245,23 @@ export default function GiftHamperBuilder() {
                   </div>
                 )}
 
-                {/* Strict Safety Notice (Requirement 7) */}
+                {/* Safety Notice */}
                 <div className="p-3.5 rounded-2xl bg-[#FFFDF9] border border-[#EADFCB] text-[11px] text-[#6B5A4B] leading-relaxed flex items-start gap-2.5">
                   <Info className="w-4 h-4 text-[#D4AF37] shrink-0 mt-0.5" />
                   <div>
                     <strong className="text-[#4A3728] block mb-0.5">
-                      Strict Allergen Safety & Verification Standard
+                      Strict Allergen Safety & Verification
                     </strong>
-                    Known allergy conflicts are strictly blocked. In accordance with botanical safety protocols, any product with missing ingredient or allergen disclosures is NOT marked allergy-safe and is flagged with an explicit verification warning.
+                    Known allergy conflicts are strictly excluded from generated options. Formulations with unverified ingredients are safely omitted when allergy filters are active.
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ================================================================= */}
-          {/* --- RESULTS: 3 OPTIONS (Budget, Balanced, Premium) --- */}
-          {/* ================================================================= */}
+          {/* Value Hamper Results: 3 Tiers */}
           {valueHamperResult.success ? (
             <div className="space-y-6">
-              {/* Summary Bar */}
               <div className="flex flex-col sm:flex-row items-center justify-between bg-[#FAF6EE] p-4 sm:p-5 rounded-2xl border border-[#E7DCB8] gap-3 text-xs">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold text-[#556B52] bg-[#E9EFE9] px-3 py-1 rounded-full">
@@ -716,7 +1276,7 @@ export default function GiftHamperBuilder() {
                 </div>
               </div>
 
-              {/* 3 Tier Options Grid (Requirement 1) */}
+              {/* 3 Tier Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
                 {valueHamperResult.options.map((hamper) => {
                   const isBalanced = hamper.tierId === 'balanced';
@@ -726,209 +1286,150 @@ export default function GiftHamperBuilder() {
                   return (
                     <div
                       key={hamper.tierId}
-                      className={`bg-white rounded-3xl border transition-all duration-300 flex flex-col justify-between overflow-hidden relative shadow-md hover:shadow-xl ${
+                      className={`bg-white rounded-3xl border transition-all duration-300 flex flex-col justify-between overflow-hidden relative shadow-xs hover:shadow-md ${
                         isBalanced
-                          ? 'border-[#556B52] ring-2 ring-[#556B52]/30'
+                          ? 'border-[#556B52] ring-1 ring-[#556B52]'
                           : isPremium
                           ? 'border-[#D4AF37]'
-                          : 'border-[#E5DAC9]'
+                          : 'border-[#EBE4D8]'
                       }`}
                     >
-                      {/* Ribbon badge for Recommended / Most Popular */}
                       {isBalanced && (
                         <div className="bg-[#556B52] text-white text-[10px] font-bold uppercase tracking-wider py-1 px-4 text-center">
-                          ⭐ Recommended Best Value & Harmony
+                          Recommended Best Value & Balance
                         </div>
                       )}
                       {isPremium && (
-                        <div className="bg-[#4A3728] text-[#E8C5B8] text-[10px] font-bold uppercase tracking-wider py-1 px-4 text-center">
-                          👑 Maximum Luxury & Indulgence
+                        <div className="bg-[#2D231B] text-[#D4AF37] text-[10px] font-bold uppercase tracking-wider py-1 px-4 text-center">
+                          Maximum Luxury & Indulgence
                         </div>
                       )}
 
                       <div className="p-6 space-y-5">
-                        {/* Tier Title & Badges */}
                         <div>
-                          <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="px-2.5 py-0.5 rounded-full font-semibold bg-[#EAE2D5] text-[#556B52]">
-                              {hamper.badge}
-                            </span>
-                            <span className="text-[#8C7A6A] font-medium">
-                              {hamper.matchScore}% Quality Match
-                            </span>
-                          </div>
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#556B52] block mb-1">
+                            {hamper.badge}
+                          </span>
                           <h3 className="font-serif text-2xl font-bold text-[#3D2C1F]">
                             {hamper.tierName}
                           </h3>
-                          <span className="text-xs font-semibold text-[#8C7A6A]">
+                          <span className="text-xs text-[#8C7A6A] font-medium">
                             {hamper.subtitle}
                           </span>
+                          <p className="text-xs text-[#7A6A5A] mt-2 leading-relaxed">
+                            {hamper.description}
+                          </p>
                         </div>
 
-                        {/* Pricing Highlight Box */}
-                        <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#EFE6D8] space-y-1.5">
-                          <div className="flex items-baseline justify-between">
-                            <span className="text-xs text-[#7A6A5A]">Complete Hamper Total:</span>
-                            <span className="font-serif text-3xl font-bold text-[#4A3728]">
-                              ₹{hamper.totalPrice}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between text-[11px] pt-1 border-t border-[#EAE0D1]">
-                            <span className="text-[#556B52] font-semibold flex items-center gap-1">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-[#556B52]" />
-                              Under ₹{hamper.budget} budget ceiling
-                            </span>
-                            <span className="text-[#7A6A5A]">
-                              ₹{hamper.budgetRemaining} remaining
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Rationale explanation */}
-                        <p className="text-xs text-[#6B5A4B] leading-relaxed italic bg-[#FFFDF9] p-3 rounded-xl border border-[#F2ECE1]">
-                          "{hamper.description}"
-                        </p>
-
-                        {/* Inclusions List: Products, Quantities, Prices (Requirement 2 & 3) */}
-                        <div className="space-y-2.5">
+                        {/* Included Products List */}
+                        <div className="space-y-2 pt-2 border-t border-[#F2ECE1]">
                           <span className="text-[10px] font-bold text-[#8C7A6A] uppercase tracking-wider block">
-                            Included In This Option ({hamper.products.length} Products + Packaging):
+                            Included Items ({hamper.products.length}):
                           </span>
-
                           <div className="space-y-2">
-                            {/* Products List */}
                             {hamper.products.map((item) => (
                               <div
                                 key={item.id}
-                                className="p-2.5 rounded-2xl bg-[#FFFDF9] border border-[#EFE6D8] flex items-center gap-3 text-xs"
+                                className="flex items-center justify-between gap-2 p-2 rounded-xl bg-[#FAF7F2] border border-[#E8DEC9]"
                               >
-                                <img
-                                  src={item.imageUrl}
-                                  alt={item.name}
-                                  className="w-11 h-11 rounded-xl object-cover shrink-0 border border-[#E5DAC9]"
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-baseline justify-between gap-1">
-                                    <span className="font-semibold text-[#3D2C1F] truncate block">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <img
+                                    src={item.imageUrl}
+                                    alt={item.name}
+                                    className="w-9 h-9 rounded-lg object-cover shrink-0"
+                                  />
+                                  <div className="min-w-0">
+                                    <div className="text-xs font-semibold text-[#3D2C1F] truncate">
                                       {item.name}
-                                    </span>
-                                    <span className="font-serif font-bold text-[#556B52] shrink-0">
-                                      ₹{item.price}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center justify-between mt-0.5 text-[11px] text-[#7A6A5A]">
-                                    <span className="bg-[#FAF7F2] px-1.5 py-0.5 rounded text-[10px] font-medium border border-[#EAE0D1]">
-                                      Qty: {item.quantity}
-                                    </span>
-
-                                    {/* Allergen verification status tag (Requirement 7) */}
-                                    {item.allergyStatus?.missingInfo ? (
-                                      <span className="inline-flex items-center gap-1 text-[10px] text-[#A6611A] bg-[#FEF6E4] px-1.5 py-0.5 rounded font-semibold border border-[#F4DCB0]">
-                                        <AlertTriangle className="w-2.5 h-2.5 text-[#D97706]" />
-                                        Unverified
-                                      </span>
-                                    ) : (
-                                      <span className="inline-flex items-center gap-1 text-[10px] text-[#556B52] bg-[#EAEFEA] px-1.5 py-0.5 rounded font-medium">
-                                        <Check className="w-2.5 h-2.5 text-[#556B52]" />
-                                        Allergy-Safe
-                                      </span>
-                                    )}
+                                    </div>
+                                    <div className="text-[10px] text-[#7A6A5A]">
+                                      {item.category}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
-
-                            {/* Packaging Inclusion Row (Requirement 3) */}
-                            <div className="p-2.5 rounded-2xl bg-[#FAF4EB] border border-[#EADFCB] flex items-center gap-3 text-xs">
-                              <img
-                                src={hamper.packaging.imageUrl}
-                                alt={hamper.packaging.name}
-                                className="w-11 h-11 rounded-xl object-cover shrink-0 border border-[#DAC9B4]"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-baseline justify-between gap-1">
-                                  <span className="font-semibold text-[#4A3728] truncate block">
-                                    {hamper.packaging.name}
-                                  </span>
-                                  <span className="font-serif font-bold text-[#556B52] shrink-0">
-                                    ₹{hamper.packaging.price}
-                                  </span>
-                                </div>
-                                <div className="flex items-center justify-between mt-0.5 text-[11px] text-[#7A6A5A]">
-                                  <span className="bg-[#FFFDF9] px-1.5 py-0.5 rounded text-[10px] font-medium border border-[#E5DAC8]">
-                                    Qty: 1 • Craft Packaging
-                                  </span>
-                                  <span className="text-[10px] text-[#556B52] font-semibold">
-                                    Included in Total
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Optional Wish Card Row */}
-                            {hamper.card && (
-                              <div className="p-2.5 rounded-2xl bg-[#FFFDF9] border border-[#EFE6D8] flex items-center justify-between text-xs">
-                                <div>
-                                  <span className="font-semibold text-[#4A3728] block">
-                                    {hamper.card.name}
-                                  </span>
-                                  <span className="text-[10px] text-[#7A6A5A]">
-                                    Qty: 1 • Calligraphed Note
-                                  </span>
-                                </div>
-                                <span className="font-serif font-bold text-[#556B52]">
-                                  ₹{hamper.card.price}
+                                <span className="text-xs font-bold text-[#4A3728] shrink-0">
+                                  ₹{item.price}
                                 </span>
                               </div>
-                            )}
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Packaging Breakdown */}
+                        <div className="pt-2 border-t border-[#F2ECE1] space-y-1 text-xs">
+                          <div className="flex justify-between items-center text-[#6B5A4B]">
+                            <span className="flex items-center gap-1">
+                              <Package className="w-3.5 h-3.5 text-[#556B52]" />
+                              <span>{hamper.packaging.name}</span>
+                            </span>
+                            <span className="font-semibold text-[#3D2C1F]">₹{hamper.packaging.price}</span>
+                          </div>
+
+                          {hamper.card && (
+                            <div className="flex justify-between items-center text-[#6B5A4B]">
+                              <span>Calligraphed Card & Wax Seal</span>
+                              <span className="font-semibold text-[#3D2C1F]">₹{hamper.card.price}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Total Price Bar */}
+                        <div className="p-4 rounded-2xl bg-[#FAF6EE] border border-[#E7DCB8] flex items-baseline justify-between">
+                          <div>
+                            <span className="text-[11px] text-[#8C7A6A] block">Total Price</span>
+                            <span className="font-serif text-2xl font-bold text-[#3D2C1F]">
+                              ₹{hamper.totalPrice}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[11px] text-[#556B52] font-semibold block">
+                              ₹{hamper.budgetRemaining} under budget
+                            </span>
+                            <span className="text-[10px] text-[#8C7A6A]">Guaranteed Ceiling</span>
                           </div>
                         </div>
                       </div>
 
-                      {/* Card Footer with Itemized Summary & Actions */}
-                      <div className="p-6 bg-[#FAF7F2] border-t border-[#EAE0D1] space-y-4">
-                        {/* Itemized math line */}
-                        <div className="text-[11px] text-[#7A6A5A] flex items-center justify-between">
-                          <span>
-                            Items (₹{hamper.totalProductPrice}) + Packaging (₹{hamper.packaging.price})
-                            {hamper.card ? ` + Card (₹${hamper.card.price})` : ''}
-                          </span>
-                          <span className="font-bold text-[#4A3728]">
-                            = ₹{hamper.totalPrice}
-                          </span>
-                        </div>
+                      {/* Action Buttons */}
+                      <div className="p-6 pt-0 space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => handleSelectValueHamper(hamper)}
+                          className={`w-full py-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                            isJustAdded
+                              ? 'bg-[#556B52] text-white'
+                              : isBalanced
+                              ? 'bg-[#556B52] hover:bg-[#3E523B] text-white shadow-xs'
+                              : 'bg-[#2D231B] hover:bg-[#3D2F24] text-white shadow-xs'
+                          }`}
+                        >
+                          {isJustAdded ? (
+                            <>
+                              <Check className="w-4 h-4" />
+                              <span>Added to Selections!</span>
+                            </>
+                          ) : (
+                            <>
+                              <ShoppingBag className="w-4 h-4" />
+                              <span>Add to Selections</span>
+                            </>
+                          )}
+                        </button>
 
-                        {/* Action buttons */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <button
-                            type="button"
-                            onClick={() => handleCustomizeValueHamper(hamper)}
-                            className="py-3 px-3 rounded-xl border border-[#D5C7B4] hover:bg-white text-[#4A3728] text-xs font-semibold text-center transition-colors"
-                          >
-                            Customise Hamper
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleSelectValueHamper(hamper)}
-                            className={`py-3 px-3 rounded-xl text-white text-xs font-semibold text-center shadow-md transition-all flex items-center justify-center gap-1.5 ${
-                              isJustAdded
-                                ? 'bg-[#3E523B]'
-                                : 'bg-[#556B52] hover:bg-[#3E523B] hover:scale-105'
-                            }`}
-                          >
-                            {isJustAdded ? (
-                              <>
-                                <Check className="w-3.5 h-3.5" />
-                                <span>Added!</span>
-                              </>
-                            ) : (
-                              <>
-                                <ShoppingBag className="w-3.5 h-3.5" />
-                                <span>Choose Hamper</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            loadIntoStudio(
+                              hamper.products,
+                              hamper.packaging,
+                              `${hamper.tierName} (${hamper.subtitle})`
+                            )
+                          }
+                          className="w-full py-2.5 rounded-xl border border-[#D5C7B4] hover:bg-[#FAF7F2] text-[#4A3728] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <Palette className="w-3.5 h-3.5 text-[#556B52]" />
+                          <span>Customize in 2D Studio</span>
+                        </button>
                       </div>
                     </div>
                   );
@@ -936,216 +1437,139 @@ export default function GiftHamperBuilder() {
               </div>
             </div>
           ) : (
-            /* =============================================================== */
-            /* --- EMPTY / INFEASIBLE STATE (Requirement 8) --- */
-            /* =============================================================== */
-            <div className="text-center py-16 px-6 bg-white rounded-3xl border border-[#E5DAC9] max-w-2xl mx-auto space-y-5 shadow-sm animate-fade-in">
-              <div className="w-16 h-16 mx-auto rounded-full bg-[#FAF3EA] text-[#C86D51] flex items-center justify-center">
-                <AlertTriangle className="w-8 h-8" />
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="font-serif text-2xl font-bold text-[#3D2C1F]">
-                  No Suitable Hamper Combination Available
-                </h3>
-                <p className="text-sm text-[#7A6A5A] max-w-md mx-auto leading-relaxed">
-                  {valueHamperResult.message}
-                </p>
-              </div>
-
-              {/* Helpful Action Suggestions */}
-              {valueHamperResult.reason === 'budget_too_low' && (
-                <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8DEC9] max-w-md mx-auto space-y-3">
-                  <span className="text-xs font-bold text-[#4A3728] block">
-                    Recommended Minimum Budget: ₹{valueHamperResult.minRequiredBudget}
-                  </span>
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleBudgetPresetClick(valueHamperResult.minRequiredBudget)}
-                      className="px-4 py-2 rounded-xl bg-[#556B52] text-white text-xs font-semibold hover:bg-[#3E523B]"
-                    >
-                      Set Budget to ₹{valueHamperResult.minRequiredBudget}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleBudgetPresetClick(1000)}
-                      className="px-4 py-2 rounded-xl border border-[#D5C7B4] text-[#4A3728] text-xs font-medium hover:bg-white"
-                    >
-                      Set to ₹1,000
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleBudgetPresetClick(1500)}
-                      className="px-4 py-2 rounded-xl border border-[#D5C7B4] text-[#4A3728] text-xs font-medium hover:bg-white"
-                    >
-                      Set to ₹1,500
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {valueHamperResult.reason === 'insufficient_safe_items' && (
-                <div className="flex justify-center gap-3">
+            <div className="p-10 rounded-3xl bg-white border border-[#EBE4D8] text-center max-w-xl mx-auto space-y-4">
+              <ShieldAlert className="w-10 h-10 text-[#C86D51] mx-auto" />
+              <h3 className="font-serif text-xl font-bold text-[#3D2C1F]">
+                Unable to Assemble Hamper
+              </h3>
+              <p className="text-xs text-[#7A6A5A] leading-relaxed">
+                {valueHamperResult.message}
+              </p>
+              <div className="pt-2 flex justify-center gap-3">
+                {selectedAllergens.length > 0 && (
                   <button
                     type="button"
                     onClick={() => setSelectedAllergens([])}
-                    className="px-6 py-2.5 rounded-xl bg-[#556B52] text-white text-xs font-semibold"
+                    className="px-4 py-2 rounded-xl border border-[#556B52] text-[#556B52] text-xs font-semibold hover:bg-[#FAF3EA]"
                   >
-                    Clear Active Allergy Restrictions
+                    Clear Allergen Filters
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/shop')}
-                    className="px-6 py-2.5 rounded-xl border border-[#D5C7B4] text-[#4A3728] text-xs font-medium"
-                  >
-                    Explore Shop Standalone Items
-                  </button>
-                </div>
-              )}
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleBudgetPresetClick(2500)}
+                  className="px-5 py-2 rounded-xl bg-[#556B52] text-white text-xs font-semibold hover:bg-[#3E523B]"
+                >
+                  Try ₹2,500 Budget
+                </button>
+              </div>
             </div>
           )}
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* --- OCCASION WIZARD VIEW (Preserved from existing application) --- */}
+      {/* MODE 3: OCCASION WIZARD                                                  */}
       {/* ========================================================================= */}
-      {builderMode === 'wizard' && currentStep <= 5 && (
+      {builderMode === 'wizard' && (
         <div className="space-y-8 animate-fade-in">
-          {/* Step Progress Indicators */}
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center justify-between relative">
-              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 bg-[#E8DEC9] -z-10" />
-              {[
-                { num: 1, label: 'Occasion' },
-                { num: 2, label: 'Recipient' },
-                { num: 3, label: 'Budget' },
-                { num: 4, label: 'Style' },
-                { num: 5, label: 'Recommendations' }
-              ].map((step) => {
-                const isPassed = currentStep > step.num;
-                const isCurrent = currentStep === step.num;
-                return (
-                  <div key={step.num} className="flex flex-col items-center">
-                    <button
-                      onClick={() => {
-                        if (isPassed) setCurrentStep(step.num);
-                      }}
-                      disabled={!isPassed && !isCurrent}
-                      className={`w-10 h-10 rounded-full flex items-center justify-center font-serif text-sm font-bold transition-all shadow-sm ${
-                        isPassed
-                          ? 'bg-[#556B52] text-white hover:scale-105'
-                          : isCurrent
-                          ? 'bg-[#4A3728] text-white ring-4 ring-[#E8C5B8]'
-                          : 'bg-white text-[#9E9080] border border-[#DDD0BF]'
-                      }`}
-                    >
-                      {isPassed ? <Check className="w-4 h-4" /> : step.num}
-                    </button>
-                    <span
-                      className={`text-[11px] font-semibold mt-2 hidden sm:block ${
-                        isCurrent ? 'text-[#4A3728]' : 'text-[#8C7A6A]'
-                      }`}
-                    >
-                      {step.label}
-                    </span>
-                  </div>
-                );
-              })}
+          {/* Progress Indicator */}
+          <div className="flex justify-center">
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#7A6A5A]">
+              {[1, 2, 3, 4].map((stepNum) => (
+                <div key={stepNum} className="flex items-center gap-1.5">
+                  <span
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] ${
+                      wizardStep === stepNum
+                        ? 'bg-[#556B52] text-white'
+                        : wizardStep > stepNum
+                        ? 'bg-[#EAEFEA] text-[#556B52]'
+                        : 'bg-neutral-100 text-neutral-400'
+                    }`}
+                  >
+                    {stepNum}
+                  </span>
+                  {stepNum < 4 && <span className="w-6 h-0.5 bg-neutral-200"></span>}
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* STEP 1: SELECT OCCASION */}
-          {currentStep === 1 && (
-            <div className="max-w-4xl mx-auto bg-white rounded-3xl p-6 sm:p-10 border border-[#E8DEC9] shadow-md space-y-8 animate-fade-in">
+          {/* Step 1: Occasion */}
+          {wizardStep === 1 && (
+            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-[#EBE4D8] shadow-xs space-y-6 max-w-3xl mx-auto">
               <div>
-                <h2 className="font-serif text-2xl font-semibold text-[#3D2C1F]">
-                  Step 1: What is the celebratory occasion?
-                </h2>
+                <h3 className="font-serif text-2xl font-bold text-[#3D2C1F]">
+                  What occasion are we celebrating?
+                </h3>
                 <p className="text-xs text-[#7A6A5A] mt-1">
-                  Selecting the right occasion helps us recommend sensory notes, aesthetics, and appropriate keepsakes.
+                  Choose a milestone to help our engine tailor fragrances, textures, and packaging aesthetics.
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {OCCASIONS.map((occ) => {
-                  const selected = occasion === occ.id;
+                  const isSelected = wizardOccasion === occ.id;
                   return (
                     <button
                       key={occ.id}
                       type="button"
-                      onClick={() => setOccasion(occ.id)}
-                      className={`p-5 rounded-2xl border text-center transition-all flex flex-col items-center justify-center gap-3 ${
-                        selected
-                          ? 'bg-[#FAF3EA] border-[#556B52] ring-2 ring-[#556B52] shadow-sm'
-                          : 'bg-[#FFFDF9] border-[#E8DEC9] hover:border-[#556B52]/50 hover:bg-[#FAF7F2]'
+                      onClick={() => setWizardOccasion(occ.id)}
+                      className={`p-4 rounded-2xl border text-left transition-all ${
+                        isSelected
+                          ? 'border-[#556B52] bg-[#FAF3EA] text-[#556B52] font-semibold ring-1 ring-[#556B52]'
+                          : 'border-[#EBE4D8] bg-white text-[#4A3728] hover:bg-[#FAF7F2]'
                       }`}
                     >
-                      <div
-                        className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
-                          selected ? 'bg-[#556B52] text-white' : 'bg-[#F2ECE1] text-[#556B52]'
-                        }`}
-                      >
-                        <Gift className="w-6 h-6" />
+                      <div className="font-serif text-sm font-semibold">{occ.label}</div>
+                      <div className="text-[10px] text-[#7A6A5A] line-clamp-2 mt-1">
+                        {occ.desc}
                       </div>
-                      <span className="font-serif font-semibold text-sm text-[#3D2C1F]">
-                        {occ.label}
-                      </span>
                     </button>
                   );
                 })}
               </div>
 
-              <div className="pt-4 border-t border-[#F0E6D8] flex justify-end">
+              <div className="flex justify-end pt-4 border-t border-[#F2ECE1]">
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(2)}
-                  className="px-8 py-3.5 rounded-full bg-[#556B52] hover:bg-[#3E523B] text-white font-medium text-sm flex items-center gap-2 shadow-md hover:scale-105 transition-all"
+                  onClick={() => setWizardStep(2)}
+                  className="px-6 py-2.5 rounded-xl bg-[#556B52] hover:bg-[#3E523B] text-white text-xs font-semibold flex items-center gap-1.5"
                 >
-                  <span>Continue to Preferences</span>
+                  <span>Next: Recipient</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
           )}
 
-          {/* STEP 2: RECIPIENT PREFERENCES */}
-          {currentStep === 2 && (
-            <div className="max-w-4xl mx-auto bg-white rounded-3xl p-6 sm:p-10 border border-[#E8DEC9] shadow-md space-y-8 animate-fade-in">
+          {/* Step 2: Recipient */}
+          {wizardStep === 2 && (
+            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-[#EBE4D8] shadow-xs space-y-6 max-w-3xl mx-auto">
               <div>
-                <h2 className="font-serif text-2xl font-semibold text-[#3D2C1F]">
-                  Step 2: Who is this hamper for?
-                </h2>
+                <h3 className="font-serif text-2xl font-bold text-[#3D2C1F]">
+                  Who is this gift for?
+                </h3>
                 <p className="text-xs text-[#7A6A5A] mt-1">
-                  Personalize recipient relationship, fragrance inclinations, and theme aesthetics.
+                  Specify your relationship and select categories of interest.
                 </p>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-[#4A3728] uppercase tracking-wider mb-2">
-                    Recipient Relationship
+                  <label className="text-xs font-bold text-[#4A3728] uppercase tracking-wider block mb-2">
+                    Relationship
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    {[
-                      'Best Friend',
-                      'Partner / Spouse',
-                      'Mother / Father',
-                      'Sibling',
-                      'Colleague / Mentor',
-                      'Corporate Client',
-                      'Self-Care',
-                      'Loved One'
-                    ].map((rel) => (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    {['Best Friend', 'Partner / Spouse', 'Mother / Father', 'Colleague', 'Corporate Client', 'Self Care'].map((rel) => (
                       <button
                         key={rel}
                         type="button"
                         onClick={() => setRecipientRelationship(rel)}
-                        className={`py-2.5 px-3 rounded-xl text-xs font-medium border text-center transition-all ${
+                        className={`p-3 rounded-xl border text-xs font-semibold transition-all ${
                           recipientRelationship === rel
-                            ? 'bg-[#556B52] text-white border-[#556B52]'
-                            : 'bg-[#FAF7F2] text-[#4A3728] border-[#E5DAC9] hover:bg-[#F2ECE1]'
+                            ? 'border-[#556B52] bg-[#FAF3EA] text-[#556B52] ring-1 ring-[#556B52]'
+                            : 'border-[#EBE4D8] bg-white text-[#4A3728] hover:bg-[#FAF7F2]'
                         }`}
                       >
                         {rel}
@@ -1154,733 +1578,306 @@ export default function GiftHamperBuilder() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-[#4A3728] uppercase tracking-wider mb-2">
-                    Preferred Product Categories (Select at least one)
+                <div className="pt-3 border-t border-[#F2ECE1]">
+                  <label className="text-xs font-bold text-[#4A3728] uppercase tracking-wider block mb-2">
+                    Preferred Formulation Types
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {[
-                      'Handmade Skincare',
-                      'Bath and Body',
-                      'Personalised Gifts',
-                      'Accessories',
-                      'Artisan Soaps',
-                      'Facial Tools'
-                    ].map((cat) => {
-                      const isChecked = preferredCategories.includes(cat);
+                  <div className="flex flex-wrap gap-2">
+                    {['Handmade Skincare', 'Bath and Body', 'Accessories'].map((cat) => {
+                      const isSelected = wizardCategories.includes(cat);
                       return (
                         <button
                           key={cat}
                           type="button"
                           onClick={() => {
-                            if (isChecked) {
-                              if (preferredCategories.length > 1) {
-                                setPreferredCategories(preferredCategories.filter((c) => c !== cat));
-                              }
-                            } else {
-                              setPreferredCategories([...preferredCategories, cat]);
-                            }
+                            setWizardCategories((prev) =>
+                              prev.includes(cat)
+                                ? prev.filter((c) => c !== cat)
+                                : [...prev, cat]
+                            );
                           }}
-                          className={`p-3 rounded-xl text-xs font-medium border text-left flex items-center justify-between transition-all ${
-                            isChecked
-                              ? 'bg-[#FAF3EA] border-[#556B52] text-[#3D2C1F] font-semibold'
-                              : 'bg-[#FAF7F2] border-[#E8DEC9] text-[#7A6A5A]'
+                          className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                            isSelected
+                              ? 'bg-[#556B52] text-white border-[#556B52]'
+                              : 'bg-white text-[#4A3728] border-[#EBE4D8] hover:bg-[#FAF7F2]'
                           }`}
                         >
-                          <span>{cat}</span>
-                          {isChecked && <Check className="w-3.5 h-3.5 text-[#556B52]" />}
+                          {cat}
                         </button>
                       );
                     })}
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-[#4A3728] uppercase tracking-wider mb-2">
-                      Preferred Scent / Aroma Profile
-                    </label>
-                    <select
-                      value={fragrancePref}
-                      onChange={(e) => setFragrancePref(e.target.value)}
-                      className="w-full p-3 rounded-xl border border-[#D5C7B4] bg-[#FAF7F2] text-xs text-[#3D2C1F] focus:outline-none focus:ring-2 focus:ring-[#556B52]"
-                    >
-                      <option value="French Lavender & Roman Chamomile">French Lavender & Roman Chamomile (Calming)</option>
-                      <option value="Sweet Citrus & Wild Bergamot">Sweet Citrus & Wild Bergamot (Uplifting)</option>
-                      <option value="Warm Saffron & Earthy Vetiver">Warm Saffron & Earthy Vetiver (Opulent)</option>
-                      <option value="Mysore Sandalwood & Damask Rose">Mysore Sandalwood & Damask Rose (Romantic)</option>
-                      <option value="Roasted Coffee & Warm Vanilla">Roasted Coffee & Warm Vanilla (Cozy)</option>
-                      <option value="Unscented / Pure Botanicals">Unscented / Pure Botanicals (Hypoallergenic)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-[#4A3728] uppercase tracking-wider mb-2">
-                      Theme & Aesthetic Palette
-                    </label>
-                    <select
-                      value={themeColor}
-                      onChange={(e) => setThemeColor(e.target.value)}
-                      className="w-full p-3 rounded-xl border border-[#D5C7B4] bg-[#FAF7F2] text-xs text-[#3D2C1F] focus:outline-none focus:ring-2 focus:ring-[#556B52]"
-                    >
-                      <option value="Earthy Sage & Botanical">Earthy Sage & Natural Kraft</option>
-                      <option value="Warm Ivory & Soft Gold">Warm Ivory & Soft Gold</option>
-                      <option value="Blush Rose & Terracotta">Blush Rose & Terracotta</option>
-                      <option value="Minimalist Charcoal & White">Minimalist Monochrome</option>
-                    </select>
-                  </div>
-                </div>
               </div>
 
-              <div className="pt-4 border-t border-[#F0E6D8] flex items-center justify-between">
+              <div className="flex items-center justify-between pt-4 border-t border-[#F2ECE1]">
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(1)}
-                  className="px-6 py-3 rounded-full border border-[#D5C7B4] text-[#4A3728] text-xs font-medium flex items-center gap-2 hover:bg-[#FAF7F2]"
+                  onClick={() => setWizardStep(1)}
+                  className="px-4 py-2.5 rounded-xl border border-[#EBE4D8] text-[#4A3728] text-xs font-semibold flex items-center gap-1.5"
                 >
-                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <ArrowLeft className="w-4 h-4" />
                   <span>Back</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(3)}
-                  className="px-8 py-3.5 rounded-full bg-[#556B52] hover:bg-[#3E523B] text-white font-medium text-sm flex items-center gap-2 shadow-md hover:scale-105 transition-all"
+                  onClick={() => setWizardStep(3)}
+                  className="px-6 py-2.5 rounded-xl bg-[#556B52] hover:bg-[#3E523B] text-white text-xs font-semibold flex items-center gap-1.5"
                 >
-                  <span>Continue to Budget</span>
+                  <span>Next: Gifting Style</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
           )}
 
-          {/* STEP 3: SET BUDGET */}
-          {currentStep === 3 && (
-            <div className="max-w-4xl mx-auto bg-white rounded-3xl p-6 sm:p-10 border border-[#E8DEC9] shadow-md space-y-8 animate-fade-in">
+          {/* Step 3: Style */}
+          {wizardStep === 3 && (
+            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-[#EBE4D8] shadow-xs space-y-6 max-w-3xl mx-auto">
               <div>
-                <h2 className="font-serif text-2xl font-semibold text-[#3D2C1F]">
-                  Step 3: What budget would you like to allocate?
-                </h2>
+                <h3 className="font-serif text-2xl font-bold text-[#3D2C1F]">
+                  Select a Gifting Aesthetic
+                </h3>
                 <p className="text-xs text-[#7A6A5A] mt-1">
-                  We never exceed your ceiling. Recommendations strictly include product values, keepsake packaging, and card craft.
+                  How should this collection feel when unwrapped?
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {BUDGET_RANGES.map((b) => {
-                  const selected = selectedBudgetRange === b.id;
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {GIFTING_STYLES.map((st) => {
+                  const isSelected = wizardStyle === st.id;
                   return (
                     <button
-                      key={b.id}
+                      key={st.id}
                       type="button"
-                      onClick={() => setSelectedBudgetRange(b.id)}
-                      className={`p-6 rounded-2xl border text-left transition-all ${
-                        selected
-                          ? 'bg-[#FAF3EA] border-[#556B52] ring-2 ring-[#556B52] shadow-sm'
-                          : 'bg-[#FFFDF9] border-[#E8DEC9] hover:border-[#556B52]/50 hover:bg-[#FAF7F2]'
+                      onClick={() => setWizardStyle(st.id)}
+                      className={`p-4 rounded-2xl border text-left transition-all ${
+                        isSelected
+                          ? 'border-[#556B52] bg-[#FAF3EA] text-[#556B52] ring-1 ring-[#556B52]'
+                          : 'border-[#EBE4D8] bg-white text-[#4A3728] hover:bg-[#FAF7F2]'
                       }`}
                     >
-                      <span className="font-serif text-xl font-bold text-[#4A3728] block">
-                        {b.label}
-                      </span>
-                      <p className="text-xs text-[#7A6A5A] mt-1.5 leading-relaxed">
-                        {b.desc}
-                      </p>
+                      <div className="font-serif text-base font-semibold">{st.name}</div>
+                      <div className="text-xs text-[#7A6A5A] mt-1">{st.desc}</div>
                     </button>
                   );
                 })}
               </div>
 
-              {selectedBudgetRange === 'custom' && (
-                <div className="p-5 rounded-2xl bg-[#FAF6EE] border border-[#E5DAC8] grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fade-in">
+              <div className="flex items-center justify-between pt-4 border-t border-[#F2ECE1]">
+                <button
+                  type="button"
+                  onClick={() => setWizardStep(2)}
+                  className="px-4 py-2.5 rounded-xl border border-[#EBE4D8] text-[#4A3728] text-xs font-semibold flex items-center gap-1.5"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWizardStep(4)}
+                  className="px-6 py-2.5 rounded-xl bg-[#556B52] hover:bg-[#3E523B] text-white text-xs font-semibold flex items-center gap-1.5"
+                >
+                  <span>Next: Budget</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Budget Range */}
+          {wizardStep === 4 && (
+            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-[#EBE4D8] shadow-xs space-y-6 max-w-3xl mx-auto">
+              <div>
+                <h3 className="font-serif text-2xl font-bold text-[#3D2C1F]">
+                  What is your target budget?
+                </h3>
+                <p className="text-xs text-[#7A6A5A] mt-1">
+                  Our recommendation algorithm will keep combinations transparently within your price cap.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {BUDGET_RANGES.map((b) => {
+                  const isSelected = wizardBudgetRange === b.id;
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => setWizardBudgetRange(b.id)}
+                      className={`p-4 rounded-2xl border text-left transition-all ${
+                        isSelected
+                          ? 'border-[#556B52] bg-[#FAF3EA] text-[#556B52] ring-1 ring-[#556B52]'
+                          : 'border-[#EBE4D8] bg-white text-[#4A3728] hover:bg-[#FAF7F2]'
+                      }`}
+                    >
+                      <div className="font-serif text-base font-semibold">{b.label}</div>
+                      <div className="text-xs text-[#7A6A5A] mt-0.5">{b.desc}</div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {wizardBudgetRange === 'custom' && (
+                <div className="grid grid-cols-2 gap-3 p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8DEC9]">
                   <div>
-                    <label className="block text-xs font-semibold text-[#4A3728] mb-1">
-                      Minimum Budget (₹ INR)
+                    <label className="text-[11px] font-semibold text-[#4A3728] block mb-1">
+                      Min (₹)
                     </label>
                     <input
                       type="number"
-                      min="500"
-                      step="100"
-                      value={customBudgetMin}
-                      onChange={(e) => setCustomBudgetMin(e.target.value)}
-                      className="w-full p-2.5 rounded-xl border border-[#D5C7B4] bg-white text-sm"
+                      value={wizardCustomMin}
+                      onChange={(e) => setWizardCustomMin(e.target.value)}
+                      className="w-full p-2 rounded-xl border border-[#D5C7B4] bg-white text-xs text-[#2D2A26]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-[#4A3728] mb-1">
-                      Maximum Budget (₹ INR)
+                    <label className="text-[11px] font-semibold text-[#4A3728] block mb-1">
+                      Max (₹)
                     </label>
                     <input
                       type="number"
-                      min="500"
-                      step="100"
-                      value={customBudgetMax}
-                      onChange={(e) => setCustomBudgetMax(e.target.value)}
-                      className="w-full p-2.5 rounded-xl border border-[#D5C7B4] bg-white text-sm"
+                      value={wizardCustomMax}
+                      onChange={(e) => setWizardCustomMax(e.target.value)}
+                      className="w-full p-2 rounded-xl border border-[#D5C7B4] bg-white text-xs text-[#2D2A26]"
                     />
                   </div>
                 </div>
               )}
 
-              <div className="pt-4 border-t border-[#F0E6D8] flex items-center justify-between">
+              <div className="flex items-center justify-between pt-4 border-t border-[#F2ECE1]">
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(2)}
-                  className="px-6 py-3 rounded-full border border-[#D5C7B4] text-[#4A3728] text-xs font-medium flex items-center gap-2 hover:bg-[#FAF7F2]"
+                  onClick={() => setWizardStep(3)}
+                  className="px-4 py-2.5 rounded-xl border border-[#EBE4D8] text-[#4A3728] text-xs font-semibold flex items-center gap-1.5"
                 >
-                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <ArrowLeft className="w-4 h-4" />
                   <span>Back</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(4)}
-                  className="px-8 py-3.5 rounded-full bg-[#556B52] hover:bg-[#3E523B] text-white font-medium text-sm flex items-center gap-2 shadow-md hover:scale-105 transition-all"
+                  onClick={handleGenerateWizard}
+                  className="px-7 py-3 rounded-xl bg-[#556B52] hover:bg-[#3E523B] text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs"
                 >
-                  <span>Continue to Gifting Style</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <HeartHandshake className="w-4 h-4" />
+                  <span>Generate Recommended Hampers</span>
                 </button>
               </div>
             </div>
           )}
 
-          {/* STEP 4: CHOOSE GIFTING STYLE */}
-          {currentStep === 4 && (
-            <div className="max-w-4xl mx-auto bg-white rounded-3xl p-6 sm:p-10 border border-[#E8DEC9] shadow-md space-y-8 animate-fade-in">
-              <div>
-                <h2 className="font-serif text-2xl font-semibold text-[#3D2C1F]">
-                  Step 4: What aesthetic or gifting style fits best?
-                </h2>
-                <p className="text-xs text-[#7A6A5A] mt-1">
-                  Our algorithm prioritizes packaging, color accents, and ingredient formulations based on this style.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {GIFTING_STYLES.map((st) => {
-                  const selected = style === st.name;
-                  return (
-                    <button
-                      key={st.id}
-                      type="button"
-                      onClick={() => setStyle(st.name)}
-                      className={`p-6 rounded-2xl border text-left transition-all ${
-                        selected
-                          ? 'bg-[#FAF3EA] border-[#556B52] ring-2 ring-[#556B52] shadow-sm'
-                          : 'bg-[#FFFDF9] border-[#E8DEC9] hover:border-[#556B52]/50 hover:bg-[#FAF7F2]'
-                      }`}
-                    >
-                      <span className="font-serif font-bold text-base text-[#4A3728] block">
-                        {st.name}
-                      </span>
-                      <p className="text-xs text-[#7A6A5A] mt-1 leading-relaxed">
-                        {st.desc}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="pt-4 border-t border-[#F0E6D8] flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setCurrentStep(3)}
-                  className="px-6 py-3 rounded-full border border-[#D5C7B4] text-[#4A3728] text-xs font-medium flex items-center gap-2 hover:bg-[#FAF7F2]"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Back</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleGenerateRecommendations}
-                  className="px-8 py-3.5 rounded-full bg-[#556B52] hover:bg-[#3E523B] text-white font-medium text-sm flex items-center gap-2 shadow-lg shadow-[#556B52]/25 hover:scale-105 transition-all"
-                >
-                  <Sparkles className="w-4 h-4 text-[#E8C5B8]" />
-                  <span>Generate Personalised Hampers</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 5: RECOMMENDATIONS RESULTS CARDS */}
-          {currentStep === 5 && (
-            <div className="space-y-8 animate-fade-in">
-              <div className="flex flex-col sm:flex-row items-center justify-between bg-[#FAF6EE] p-5 rounded-2xl border border-[#E7DCB8] gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold text-[#556B52] bg-[#E9EFE9] px-3 py-1 rounded-full">
-                    Active Criteria:
-                  </span>
-                  <span className="text-xs text-[#4A3728] font-medium">
-                    {occasion} • For {recipientRelationship} • {style} • Budget {selectedBudgetRange}
-                  </span>
+          {/* Step 5: Recommendations Results */}
+          {wizardStep === 5 && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row items-center justify-between bg-white p-5 rounded-2xl border border-[#EBE4D8] gap-3">
+                <div>
+                  <h3 className="font-serif text-xl font-bold text-[#3D2C1F]">
+                    Curated Hampers for {wizardOccasion} ({recipientRelationship})
+                  </h3>
+                  <p className="text-xs text-[#7A6A5A]">
+                    Aesthetic: <strong>{wizardStyle}</strong> • In-Stock Verified
+                  </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(1)}
-                  className="text-xs font-semibold text-[#4A3728] hover:text-[#556B52] flex items-center gap-1.5"
+                  onClick={() => setWizardStep(1)}
+                  className="px-4 py-2 rounded-xl border border-[#EBE4D8] text-[#4A3728] text-xs font-semibold hover:bg-[#FAF7F2]"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Adjust Criteria</span>
+                  Reconfigure Wizard
                 </button>
               </div>
 
-              {recommendations.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {recommendations.map((hamper) => (
+              {wizardRecommendations.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {wizardRecommendations.map((hamper) => (
                     <div
                       key={hamper.id}
-                      className="bg-white rounded-3xl border border-[#E5DAC9] shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden"
+                      className="bg-white rounded-3xl border border-[#EBE4D8] p-6 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4"
                     >
-                      <div className="p-6 space-y-4">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="px-2.5 py-0.5 rounded-full font-semibold bg-[#E8C5B8] text-[#4A3728]">
-                            {hamper.matchScore}% Match Score
-                          </span>
-                          <span className="text-[#8C7A6A] font-medium">
-                            Budget Left: ₹{hamper.budgetRemaining}
-                          </span>
-                        </div>
-
-                        <h3 className="font-serif text-2xl font-bold text-[#3D2C1F]">
+                      <div className="space-y-3">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#556B52] bg-[#FAF3EA] px-2.5 py-0.5 rounded-full border border-[#E8DEC9]">
+                          {hamper.matchScore}% Match Score
+                        </span>
+                        <h4 className="font-serif text-xl font-bold text-[#2D2A26]">
                           {hamper.name}
-                        </h3>
-
-                        <div className="p-3 rounded-xl bg-[#FAF4EB] border border-[#EFE4D4] text-xs text-[#6B5A4B] leading-relaxed">
-                          <span className="font-semibold text-[#4A3728] block mb-0.5">
-                            Artisan Curation Logic:
-                          </span>
+                        </h4>
+                        <p className="text-xs text-[#7A6A5A] leading-relaxed">
                           {hamper.matchReason}
-                        </div>
+                        </p>
 
-                        <div>
-                          <span className="text-[10px] font-semibold text-[#8C7A6A] uppercase tracking-wider block mb-2">
-                            Included In This Combination ({hamper.products.length} Products + Packaging):
+                        {/* Items */}
+                        <div className="space-y-1.5 pt-2 border-t border-[#F2ECE1]">
+                          <span className="text-[10px] font-bold text-[#8C7A6A] uppercase tracking-wider block">
+                            Included Items:
                           </span>
-                          <div className="space-y-2">
-                            {hamper.itemBreakdown.map((item, idx) => (
-                              <div
-                                key={idx}
-                                className="flex items-center justify-between p-2 rounded-xl bg-[#FAF7F2] border border-[#EFE6D8] text-xs"
-                              >
-                                <span className="truncate text-[#4A3728] font-medium max-w-[200px]">
-                                  {item.name}
-                                </span>
-                                <span className="font-serif font-bold text-[#556B52]">
-                                  ₹{item.price}
-                                </span>
-                              </div>
-                            ))}
+                          {hamper.products.map((p) => (
+                            <div key={p.id} className="text-xs flex justify-between text-[#4A3728]">
+                              <span className="truncate pr-2">• {p.name}</span>
+                              <span className="font-medium shrink-0">₹{p.price}</span>
+                            </div>
+                          ))}
+                          <div className="text-xs flex justify-between text-[#7A6A5A] pt-1 border-t border-[#F2ECE1]">
+                            <span>{hamper.packaging.name}</span>
+                            <span>₹{hamper.packaging.price}</span>
+                          </div>
+                          <div className="text-xs flex justify-between text-[#7A6A5A]">
+                            <span>Calligraphed Wish Card</span>
+                            <span>₹199</span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="p-6 bg-[#FAF7F2] border-t border-[#EAE0D1] space-y-4">
+                      <div className="pt-3 border-t border-[#F2ECE1] space-y-2">
                         <div className="flex items-baseline justify-between">
-                          <div>
-                            <span className="text-[10px] text-[#8C7A6A] block">Complete Hamper Total</span>
-                            <span className="font-serif text-2xl font-bold text-[#4A3728]">
-                              ₹{hamper.totalPrice}
-                            </span>
-                          </div>
-                          <span className="text-xs text-[#556B52] font-semibold">
-                            Sum of items + packaging
+                          <span className="text-xs text-[#7A6A5A]">Total Cost</span>
+                          <span className="font-serif text-2xl font-bold text-[#2D2A26]">
+                            ₹{hamper.totalPrice}
                           </span>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
-                          <button
-                            type="button"
-                            onClick={() => handleCustomizeHamper(hamper)}
-                            className="py-3 px-4 rounded-xl border border-[#D5C7B4] hover:bg-white text-[#4A3728] text-xs font-semibold text-center transition-colors"
-                          >
-                            Customise Hamper
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              addHamperToCart({
-                                id: hamper.id,
-                                name: hamper.name,
-                                occasion: hamper.occasion,
-                                style: hamper.style,
-                                packaging: hamper.packaging,
-                                products: hamper.products,
-                                totalPrice: hamper.totalPrice
-                              });
-                              navigate('/selections');
-                            }}
-                            className="py-3 px-4 rounded-xl bg-[#556B52] hover:bg-[#3E523B] text-white text-xs font-semibold text-center shadow-sm transition-all hover:scale-105"
-                          >
-                            Choose Hamper
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectWizardHamper(hamper)}
+                          className="w-full py-3 rounded-xl bg-[#556B52] hover:bg-[#3E523B] text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs"
+                        >
+                          <ShoppingBag className="w-4 h-4" />
+                          <span>Add to Selections</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => loadIntoStudio(hamper.products, hamper.packaging, hamper.name)}
+                          className="w-full py-2.5 rounded-xl border border-[#D5C7B4] hover:bg-[#FAF7F2] text-[#4A3728] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <Palette className="w-3.5 h-3.5 text-[#556B52]" />
+                          <span>Customize in 2D Studio</span>
+                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-16 px-4 bg-white rounded-3xl border border-[#E5DAC9] max-w-2xl mx-auto space-y-4">
-                  <div className="w-16 h-16 mx-auto rounded-full bg-[#FAF3EA] text-[#C86D51] flex items-center justify-center">
-                    <Gift className="w-8 h-8" />
-                  </div>
-                  <h3 className="font-serif text-2xl font-semibold text-[#3D2C1F]">
-                    No Exact Combinations Within Current Budget
-                  </h3>
-                  <p className="text-sm text-[#7A6A5A] max-w-md mx-auto">
-                    We could not build a full multi-item keepsake hamper strictly under this budget limit. Please consider adjusting your budget or exploring individual products.
+                <div className="p-10 rounded-3xl bg-white border border-[#EBE4D8] text-center max-w-xl mx-auto space-y-3">
+                  <h4 className="font-serif text-lg font-bold text-[#3D2C1F]">
+                    No exact match in this price tier
+                  </h4>
+                  <p className="text-xs text-[#7A6A5A]">
+                    Try broadening your budget range or selecting different formulation categories.
                   </p>
-                  <div className="pt-2 flex justify-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedBudgetRange('1000-2000');
-                        setCurrentStep(3);
-                      }}
-                      className="px-6 py-3 rounded-full bg-[#556B52] text-white text-xs font-semibold"
-                    >
-                      Increase Budget Range
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => navigate('/shop')}
-                      className="px-6 py-3 rounded-full border border-[#D5C7B4] text-[#4A3728] text-xs font-medium"
-                    >
-                      Shop Standalone Items
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setWizardStep(4)}
+                    className="px-5 py-2.5 rounded-xl bg-[#556B52] text-white text-xs font-semibold"
+                  >
+                    Adjust Budget
+                  </button>
                 </div>
               )}
             </div>
           )}
         </div>
       )}
-
-      {/* ========================================================================= */}
-      {/* --- STEP 6: CUSTOMIZE SELECTED HAMPER STUDIO (Common Editor) --- */}
-      {/* ========================================================================= */}
-      {currentStep === 6 && activeHamper && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
-          {/* Left: Customisation Controls */}
-          <div className="lg:col-span-7 space-y-6">
-            <div className="bg-white p-6 rounded-3xl border border-[#E5DAC9] shadow-sm flex items-center justify-between">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-[#556B52] tracking-wider block">
-                  Bespoke Studio Edition
-                </span>
-                <h2 className="font-serif text-2xl font-bold text-[#3D2C1F]">
-                  {activeHamper.name}
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  if (builderMode === 'value') {
-                    setActiveHamper(null);
-                    setCurrentStep(1);
-                  } else {
-                    setCurrentStep(5);
-                  }
-                }}
-                className="text-xs font-semibold text-[#7A6A5A] hover:text-[#4A3728] flex items-center gap-1"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>{builderMode === 'value' ? 'Back to Value Mode' : 'Switch Hamper'}</span>
-              </button>
-            </div>
-
-            {/* 1. Items Customizer */}
-            <div className="bg-white p-6 rounded-3xl border border-[#E5DAC9] shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-serif text-lg font-semibold text-[#3D2C1F]">
-                    Hamper Contents & Quantities
-                  </h3>
-                  <p className="text-xs text-[#7A6A5A]">
-                    Add, remove, or modify quantities of artisan products.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowItemPicker(true)}
-                  className="px-3.5 py-1.5 rounded-full bg-[#FAF0E4] hover:bg-[#F3E3D3] text-[#4A3728] text-xs font-semibold flex items-center gap-1 border border-[#E2D2BE]"
-                >
-                  <Plus className="w-3.5 h-3.5 text-[#556B52]" />
-                  <span>Add Product</span>
-                </button>
-              </div>
-
-              {/* Items List */}
-              <div className="space-y-3">
-                {activeHamper.products.map((item) => (
-                  <div
-                    key={item.id}
-                    className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8DEC9] flex items-center justify-between gap-4"
-                  >
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={item.imageUrl}
-                        alt={item.name}
-                        className="w-12 h-12 rounded-xl object-cover shrink-0"
-                      />
-                      <div>
-                        <h4 className="font-medium text-xs sm:text-sm text-[#3D2C1F]">
-                          {item.name}
-                        </h4>
-                        <span className="font-serif font-bold text-xs text-[#556B52]">
-                          ₹{item.price} each
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center bg-white rounded-xl border border-[#D5C7B4] p-0.5">
-                        <button
-                          type="button"
-                          onClick={() => updateHamperItemQty(item.id, -1)}
-                          className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold text-[#4A3728] hover:bg-[#FAF7F2]"
-                        >
-                          -
-                        </button>
-                        <span className="w-7 text-center font-bold text-xs text-[#4A3728]">
-                          {item.quantity}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => updateHamperItemQty(item.id, 1)}
-                          className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold text-[#4A3728] hover:bg-[#FAF7F2]"
-                        >
-                          +
-                        </button>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => removeHamperItem(item.id)}
-                        className="p-1.5 text-[#A08C7D] hover:text-[#C86D51] rounded-lg transition-colors"
-                        title="Remove Item"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 2. Packaging Picker */}
-            <div className="bg-white p-6 rounded-3xl border border-[#E5DAC9] shadow-sm space-y-4">
-              <div>
-                <h3 className="font-serif text-lg font-semibold text-[#3D2C1F]">
-                  Select Keepsake Packaging
-                </h3>
-                <p className="text-xs text-[#7A6A5A]">
-                  Each hamper is packed with natural wood excelsior filler and dried botanical sprigs.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {PACKAGING_OPTIONS.map((pkg) => {
-                  const isSelected = activeHamper.packaging?.id === pkg.id;
-                  return (
-                    <button
-                      key={pkg.id}
-                      type="button"
-                      onClick={() => changePackaging(pkg)}
-                      className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 transition-all ${
-                        isSelected
-                          ? 'bg-[#FAF3EA] border-[#556B52] ring-2 ring-[#556B52]'
-                          : 'bg-[#FFFDF9] border-[#E8DEC9] hover:bg-[#FAF7F2]'
-                      }`}
-                    >
-                      <img
-                        src={pkg.imageUrl}
-                        alt={pkg.name}
-                        className="w-12 h-12 rounded-xl object-cover shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <span className="font-serif font-bold text-xs text-[#3D2C1F] block leading-snug">
-                          {pkg.name}
-                        </span>
-                        <span className="font-bold text-xs text-[#556B52] block mt-1">
-                          ₹{pkg.price}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 3. Calligraphed Card Message */}
-            <div className="bg-white p-6 rounded-3xl border border-[#E5DAC9] shadow-sm space-y-4">
-              <div>
-                <h3 className="font-serif text-lg font-semibold text-[#3D2C1F] flex items-center gap-2">
-                  <PenTool className="w-4 h-4 text-[#D4AF37]" />
-                  <span>Calligraphed Deckled Wish Card & Wax Seal (+₹199)</span>
-                </h3>
-                <p className="text-xs text-[#7A6A5A]">
-                  Handmade cotton rag paper hand-lettered by our artisan calligrapher and sealed with hot antique gold wax.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {CARD_TEMPLATES.map((tmpl) => (
-                  <button
-                    key={tmpl.id}
-                    type="button"
-                    onClick={() => setCardTemplate(tmpl.id)}
-                    className={`p-2 rounded-xl border text-center text-xs transition-all ${
-                      cardTemplate === tmpl.id
-                        ? 'bg-[#FAF3EA] border-[#556B52] font-bold ring-1 ring-[#556B52]'
-                        : 'bg-[#FAF7F2] border-[#E8DEC9] text-[#7A6A5A]'
-                    }`}
-                  >
-                    <span>{tmpl.motif}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <input
-                  type="text"
-                  placeholder="Recipient Name (e.g. Dearest Mira)"
-                  value={cardRecipient}
-                  onChange={(e) => setCardRecipient(e.target.value)}
-                  className="p-3 rounded-xl border border-[#D5C7B4] bg-[#FAF7F2] text-xs text-[#3D2C1F] focus:outline-none focus:ring-2 focus:ring-[#556B52]"
-                />
-                <input
-                  type="text"
-                  placeholder="Your Name / Signature (e.g. With love, Kabir)"
-                  value={cardSender}
-                  onChange={(e) => setCardSender(e.target.value)}
-                  className="p-3 rounded-xl border border-[#D5C7B4] bg-[#FAF7F2] text-xs text-[#3D2C1F] focus:outline-none focus:ring-2 focus:ring-[#556B52]"
-                />
-              </div>
-
-              <textarea
-                rows={3}
-                value={customCardMessage}
-                onChange={(e) => setCustomCardMessage(e.target.value)}
-                placeholder="Compose your custom heartfelt message to be hand-lettered onto the card..."
-                className="w-full p-3.5 rounded-xl border border-[#D5C7B4] bg-[#FAF7F2] text-xs text-[#3D2C1F] focus:outline-none focus:ring-2 focus:ring-[#556B52] leading-relaxed"
-              />
-            </div>
-          </div>
-
-          {/* Right: Real-time Hamper Cost Summary */}
-          <div className="lg:col-span-5">
-            <div className="sticky top-28 bg-white p-6 sm:p-8 rounded-3xl border border-[#E5DAC9] shadow-lg space-y-6">
-              <h3 className="font-serif text-xl font-bold text-[#3D2C1F] pb-3 border-b border-[#F0E6D8]">
-                Hamper Total Summary
-              </h3>
-
-              <div className="space-y-3 text-xs">
-                {activeHamper.products.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center text-[#4A3728]">
-                    <span className="truncate max-w-[200px]">
-                      {item.quantity}x {item.name}
-                    </span>
-                    <span className="font-serif font-bold">
-                      ₹{item.price * item.quantity}
-                    </span>
-                  </div>
-                ))}
-
-                <div className="flex justify-between items-center text-[#4A3728] pt-2 border-t border-[#F0E6D8]">
-                  <span>{activeHamper.packaging?.name}</span>
-                  <span className="font-serif font-bold">
-                    ₹{activeHamper.packaging?.price || 0}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center text-[#4A3728]">
-                  <span>Calligraphed Keepsake Card & Wax Seal</span>
-                  <span className="font-serif font-bold">₹199</span>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t-2 border-[#556B52]/20 flex items-baseline justify-between">
-                <div>
-                  <span className="text-xs text-[#8C7A6A] block">Final Hamper Total</span>
-                  <span className="font-serif text-3xl font-bold text-[#4A3728]">
-                    ₹{activeHamper.totalPrice}
-                  </span>
-                </div>
-                <span className="text-xs text-[#556B52] font-semibold">
-                  All taxes & craft included
-                </span>
-              </div>
-
-              <div className="space-y-3 pt-2">
-                <button
-                  type="button"
-                  onClick={handleSaveAndContinueToSelections}
-                  className="w-full py-4 rounded-full bg-[#556B52] hover:bg-[#3E523B] text-white font-medium text-sm shadow-md hover:scale-105 transition-all flex items-center justify-center gap-2"
-                >
-                  <ShoppingBag className="w-4 h-4 text-[#E8C5B8]" />
-                  <span>Save Hamper & Go to Selections</span>
-                </button>
-
-                <p className="text-[11px] text-center text-[#8C7A6A] leading-relaxed">
-                  You can review all items and submit your official order enquiry on the next screen.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Catalog Item Picker Modal for Hamper Customization */}
-      {showItemPicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#FAF7F2] rounded-3xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-[#E5DAC8] shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E8DEC9]">
-              <h3 className="font-serif text-xl font-bold text-[#3D2C1F]">
-                Add Item to Hamper
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowItemPicker(false)}
-                className="text-xs font-semibold text-[#8C7A6A] hover:text-[#4A3728]"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {products
-                .filter((p) => p.available && p.category !== 'Gift Hampers' && p.category !== 'Gift Packaging')
-                .map((product) => (
-                  <div
-                    key={product.id}
-                    className="flex items-center justify-between p-3 rounded-2xl bg-white border border-[#E8DEC9] text-xs"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="w-10 h-10 rounded-lg object-cover"
-                      />
-                      <div>
-                        <span className="font-medium text-[#4A3728] block truncate max-w-[140px]">
-                          {product.name}
-                        </span>
-                        <span className="font-serif font-bold text-[#556B52]">
-                          ₹{product.price}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => addProductToActiveHamper(product)}
-                      className="px-3 py-1.5 rounded-lg bg-[#556B52] hover:bg-[#3E523B] text-white font-semibold text-[11px]"
-                    >
-                      + Add
-                    </button>
-                  </div>
-                ))}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
+    </AnimatedPage>
   );
 }

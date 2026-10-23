@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
+import AnimatedPage from '../components/AnimatedPage';
 import { useSelections } from '../context/SelectionContext';
 import ProductCard from '../components/ProductCard';
 import ProductDetailModal from '../components/ProductDetailModal';
@@ -55,6 +57,7 @@ export default function ProductCatalogue() {
   }, [products, selectedCategory, searchQuery, sortBy, inStockOnly]);
 
   return (
+    <AnimatedPage>
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
       {/* Page Header */}
       <div className="text-center max-w-2xl mx-auto space-y-2">
@@ -186,12 +189,15 @@ export default function ProductCatalogue() {
       )}
 
       {/* Product Detail Modal */}
-      {selectedProductForModal && (
-        <ProductDetailModal
-          product={selectedProductForModal}
-          onClose={() => setSelectedProductForModal(null)}
-        />
-      )}
+      <AnimatePresence>
+        {selectedProductForModal && (
+          <ProductDetailModal
+            product={selectedProductForModal}
+            onClose={() => setSelectedProductForModal(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
+    </AnimatedPage>
   );
 }

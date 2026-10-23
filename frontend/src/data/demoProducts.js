@@ -2,6 +2,197 @@
 // Handcrafted Skincare, Bath & Body, Gift Hampers, Accessories, Personalised Gifts, and Gift Packaging
 
 export const initialProducts = [
+  // --- ARTISAN PHOTOSHOOT COLLECTION ---
+// --- 1. APRICOT WALNUT GLOW SCRUB ---
+  {
+    id: 'prod-aws',
+    name: 'Apricot Walnut Glow Scrub',
+    tagline: 'Gentle micro-exfoliating polish with crushed walnut granules and cold-pressed apricot kernel oil',
+    category: 'Handmade Skincare',
+    subCategory: 'Face & Body Scrubs',
+    price: 499,
+    rating: 4.8,
+    reviewCount: 94,
+    available: true,
+    stock: 28,
+    badge: 'Artisan Crafted',
+    imageUrl: '/apricot-walnut-glow-scrub.jpg',
+    description: 'A botanical exfoliating polish carefully milled with ultra-fine crushed walnut shells and cold-pressed apricot kernel oil. Buffs away dull skin cells, unclogs congested pores, and promotes a natural, luminous glow.',
+    ingredients: ['Crushed English Walnut Shell Powder', 'Cold-Pressed Apricot Kernel Oil', 'Organic Aloe Vera Juice', 'Plant Glycerin', 'Niacinamide (Vitamin B3)'],
+    fragrance: 'Fresh Apricot & Sweet Almond',
+    texture: 'Rich Micro-Granular Emulsion',
+    productFormat: 'Glass Pot with Gold Cap',
+    volume: '100 g',
+    suitability: 'Normal, combination, and dull skin',
+    howToUse: 'Gently massage onto clean, damp skin in circular motions for 60 seconds. Rinse clean with lukewarm water.',
+    allergens: 'Contains crushed walnut shell powder (tree nut derivative)',
+    isSkincare: true,
+    isPopular: true
+  },
+
+  // --- 2. WHIPPED SHEA BODY BUTTER ---
+  {
+    id: 'prod-bb',
+    name: 'Whipped Shea Body Butter',
+    tagline: 'Decadent cloud-whipped raw Ghanaian shea butter enriched with sweet almond and jojoba',
+    category: 'Bath and Body',
+    subCategory: 'Body Butters',
+    price: 599,
+    rating: 4.9,
+    reviewCount: 165,
+    available: true,
+    stock: 40,
+    badge: 'Customer Favourite',
+    imageUrl: '/body-butter.jpg',
+    description: 'Triple-whipped fair-trade unrefined shea butter combined with cold-pressed sweet almond and golden jojoba oils. Melts on contact with skin to provide 24-hour deep nourishment without an oily residue.',
+    ingredients: ['Unrefined Ghanaian Shea Butter (Butyrospermum Parkii)', 'Cold-Pressed Sweet Almond Oil', 'Golden Jojoba Seed Oil', 'Vitamin E (Tocopherol)', 'Arrowroot Powder'],
+    fragrance: 'Earthy Warm Shea & Cardamom Blossom',
+    texture: 'Air-Whipped Melting Soufflé',
+    productFormat: 'Apothecary Jar with Gold Cap',
+    volume: '180 g',
+    suitability: 'Dry, very dry, and dehydrated skin',
+    howToUse: 'Smooth generously over slightly damp skin after a bath or shower to seal in rich hydration.',
+    allergens: 'Contains tree nut derivatives (unrefined shea butter and sweet almond oil)',
+    isSkincare: true,
+    isPopular: true
+  },
+
+  // --- 3. PURE SOOTHING ALOE VERA GEL ---
+  {
+    id: 'prod-avg',
+    name: 'Pure Soothing Aloe Vera Gel',
+    tagline: '99% pure cold-stabilized inner leaf aloe vera with organic cucumber hydrosol',
+    category: 'Handmade Skincare',
+    subCategory: 'Soothing Gels',
+    price: 349,
+    rating: 4.8,
+    reviewCount: 88,
+    available: true,
+    stock: 50,
+    badge: 'Pure & Gentle',
+    imageUrl: '/aloe-vera-gel.jpg',
+    description: 'Cold-pressed from harvested organic Aloe Barbadensis inner leaf filets. Calms sunburns, soothes redness, provides ultra-light oil-free hydration, and balances sensitive or inflamed skin instantly.',
+    ingredients: ['Organic Aloe Barbadensis Leaf Juice (99%)', 'Organic Cucumber Hydrosol', 'Plant Xanthan Gum', 'Vegetable Glycerin', 'Citric Acid'],
+    fragrance: 'Crisp Cucumber & Fresh Botanical Leaf',
+    texture: 'Cool Lightweight Jelly',
+    productFormat: 'Clear Glass Pot with Gold Cap',
+    volume: '100 g',
+    suitability: 'All skin types, excellent for sensitive and acne-prone skin',
+    howToUse: 'Apply liberally to face, neck, body, or scalp whenever soothing hydration is desired.',
+    allergens: '100% plant-based, allergen-free, alcohol-free, nut-free, fragrance-free',
+    isSkincare: true,
+    isPopular: false
+  },
+
+  // --- 4. COFFEE COCOA BODY SCRUB ---
+  {
+    id: 'prod-ccs',
+    name: 'Coffee Cocoa Body Scrub',
+    tagline: 'Energize, detoxify and rejuvenate with fresh roasted Arabica coffee and pure cocoa butter',
+    category: 'Bath and Body',
+    subCategory: 'Exfoliating Polishes',
+    price: 499,
+    originalPrice: 650,
+    rating: 4.9,
+    reviewCount: 112,
+    available: true,
+    stock: 32,
+    badge: 'Energizing Polish',
+    imageUrl: '/coffee-cocoa-body-scrub.jpg',
+    description: 'An aromatic wake-up call for tired skin. Crafted with finely roasted Arabica coffee grounds, organic raw cocoa butter, and mineral kaolin clay to gently exfoliate dead cells, improve circulation, and soften skin texture.',
+    ingredients: ['Distilled Water', 'Stearic Acid', 'Cetyl Alcohol', 'Roasted Coffee Powder', 'Pure Cocoa Butter', 'Kaolin Clay', 'Walnut Shell Granules', 'Fragrance Oil', 'Natural Preservative'],
+    fragrance: 'Fresh Dark Roast Arabica & Warm Cacao',
+    texture: 'Rich Exfoliating Cream Polish',
+    productFormat: 'Apothecary Jar with Gold Cap',
+    volume: '100 g',
+    suitability: 'Normal, dry, and rough body skin',
+    howToUse: 'Apply to damp skin, gently massage in circular motions for 1-2 minutes, then rinse off thoroughly with warm water.',
+    allergens: 'Contains natural coffee extract and cocoa butter',
+    isSkincare: true,
+    isPopular: true
+  },
+
+  // --- 5. ROYAL ALMOND SAFFRON SOAP ---
+  {
+    id: 'prod-ass',
+    name: 'Royal Almond Saffron Soap',
+    tagline: 'Kashmiri Mogra saffron strands, crushed sweet almonds, and wild raw honey in creamy cold-processed goat milk',
+    category: 'Bath and Body',
+    subCategory: 'Cold-Processed Soaps',
+    price: 349,
+    rating: 4.9,
+    reviewCount: 156,
+    available: true,
+    stock: 38,
+    badge: 'Royal Luxury',
+    imageUrl: '/almond-saffron-soap.jpg',
+    description: 'Our most luxurious artisan soap bar. Features authentic grade-1 Kashmiri saffron threads infused into creamy goat milk, wild forest honey, and cold-pressed sweet almond oil, creating a conditioning royal lather.',
+    ingredients: ['Saponified Olive & Coconut Oil', 'Raw Farm Goat Milk', 'Organic Wild Forest Honey', 'Kashmiri Mogra Saffron Threads', 'Sweet Almond Kernel Flour', 'Cold-Pressed Sweet Almond Oil'],
+    fragrance: 'Warm Royal Saffron & Creamy Honey Milk',
+    texture: 'Rich Silky Lather Bar',
+    productFormat: 'Artisan Keepsake Boxed Bar',
+    volume: '125 g',
+    suitability: 'Dry, mature, and sensitive skin',
+    howToUse: 'Work into a creamy lather with warm water and rinse thoroughly.',
+    allergens: 'Contains goat milk (dairy), sweet almond (tree nut), and organic wild forest honey',
+    isSkincare: true,
+    isPopular: true
+  },
+
+  // --- 6. NOURISHING BOTANICAL LIP BALM ---
+  {
+    id: 'prod-lb',
+    name: 'Nourishing Botanical Lip Balm',
+    tagline: 'Raw organic forest honey, unrefined beeswax, cold-pressed castor, and rosehip oil in vintage gold pocket tin',
+    category: 'Handmade Skincare',
+    subCategory: 'Lip Care',
+    price: 249,
+    rating: 4.8,
+    reviewCount: 92,
+    available: true,
+    stock: 60,
+    badge: 'Pocket Essential',
+    imageUrl: '/kajal-lip-balm.jpg',
+    description: 'A deeply restorative herbal lip treatment. Blends unrefined forest beeswax, raw organic forest honey, virgin coconut oil, cold-pressed castor oil, and rosehip seed oil to seal in moisture and heal chapped lips naturally.',
+    ingredients: ['Raw Organic Forest Honey', 'Cera Alba (Unrefined Forest Beeswax)', 'Virgin Coconut Oil', 'Cold-Pressed Castor Seed Oil', 'Rosa Canina (Rosehip) Seed Oil', 'Natural Vitamin E'],
+    fragrance: 'Mild Natural Honey & Rose Petal',
+    texture: 'Velvety Protective Balm',
+    productFormat: 'Vintage Gold Round Tin',
+    volume: '10 g',
+    suitability: 'Dry, cracked, or windburnt lips',
+    howToUse: 'Dab lightly onto lips with clean fingertips throughout the day or before sleep.',
+    allergens: 'Contains natural bee products (raw forest honey and unrefined beeswax)',
+    isSkincare: true,
+    isPopular: true
+  },
+
+  // --- 7. ORGANIC AYURVEDIC HERBAL KAJAL ---
+  {
+    id: 'prod-kj',
+    name: 'Organic Ayurvedic Herbal Kajal',
+    tagline: 'Traditional carbon soot extracted from pure castor oil earthen lamps with cooling camphor and almond oil',
+    category: 'Accessories',
+    subCategory: 'Eye Care & Kohl',
+    price: 399,
+    rating: 4.9,
+    reviewCount: 104,
+    available: true,
+    stock: 35,
+    badge: 'Artisan Heritage',
+    imageUrl: '/kajal-lip-balm.jpg',
+    description: 'Prepared in the ancient Ayurvedic tradition. Earthen lamps fueled with organic cold-pressed castor oil produce soot that is gathered and whipped with pure cow ghee and Bhimseni camphor for calming, intense black definition.',
+    ingredients: ['Carbon Lamp Black (Castor Soot)', 'A2 Cow Ghee', 'Cold-Pressed Castor Oil', 'Bhimseni Camphor (Karpura)', 'Organic Sweet Almond Oil'],
+    fragrance: 'Cool Camphorous Herbal Aroma',
+    texture: 'Smooth Glide Velvet Cream',
+    productFormat: 'Pocket Twist Stick',
+    volume: '3.5 g',
+    suitability: 'Sensitive eyes, lens wearers, and daily traditional eye lining',
+    howToUse: 'Glide gently along the waterline with clean fingertip or brush for deep soothing definition.',
+    allergens: 'Contains A2 cow ghee (dairy) and organic sweet almond oil (tree nut)',
+    isSkincare: true,
+    isPopular: true
+  },
+
   // --- HANDMADE SKINCARE ---
   {
     id: 'prod-sk-1',
@@ -639,6 +830,34 @@ export const CATEGORIES = [
   'Accessories',
   'Personalised Gifts',
   'Gift Packaging'
+];
+
+
+export const HAMPER_SIZES = [
+  {
+    id: 'size-petite',
+    name: 'Petite',
+    maxItems: 3,
+    label: '3 Items'
+  },
+  {
+    id: 'size-classic',
+    name: 'Classic',
+    maxItems: 5,
+    label: '5 Items'
+  },
+  {
+    id: 'size-deluxe',
+    name: 'Deluxe',
+    maxItems: 8,
+    label: '8 Items'
+  },
+  {
+    id: 'size-bespoke',
+    name: 'Grand',
+    maxItems: 12,
+    label: '12 Items'
+  }
 ];
 
 export const PACKAGING_OPTIONS = [

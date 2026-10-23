@@ -92,6 +92,21 @@ public class Product {
     @Column(name = "image_url")
     private String imageUrl;
 
+    @Column(name = "length_cm", precision = 8, scale = 2)
+    private BigDecimal lengthCm;
+
+    @Column(name = "width_cm", precision = 8, scale = 2)
+    private BigDecimal widthCm;
+
+    @Column(name = "height_cm", precision = 8, scale = 2)
+    private BigDecimal heightCm;
+
+    @Column(name = "volume_cm3", precision = 10, scale = 2)
+    private BigDecimal volumeCm3;
+
+    @Column(name = "weight_grams", precision = 8, scale = 2)
+    private BigDecimal weightGrams;
+
     public Product() {
     }
 
@@ -275,5 +290,45 @@ public class Product {
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public BigDecimal getLengthCm() {
+        return lengthCm;
+    }
+
+    public void setLengthCm(BigDecimal lengthCm) {
+        this.lengthCm = lengthCm;
+    }
+
+    public BigDecimal getWidthCm() {
+        return widthCm;
+    }
+
+    public void setWidthCm(BigDecimal widthCm) {
+        this.widthCm = widthCm;
+    }
+
+    public BigDecimal getHeightCm() {
+        return heightCm;
+    }
+
+    public void setHeightCm(BigDecimal heightCm) {
+        this.heightCm = heightCm;
+    }
+
+    public BigDecimal getVolumeCm3() {
+        return volumeCm3;
+    }
+
+    public void setVolumeCm3(BigDecimal volumeCm3) {
+        this.volumeCm3 = volumeCm3;
+    }
+
+    public BigDecimal getWeightGrams() {
+        return weightGrams;
+    }
+
+    public void setWeightGrams(BigDecimal weightGrams) {
+        this.weightGrams = weightGrams;
     }
 }

@@ -1,18 +1,22 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useSelections } from '../context/SelectionContext';
 import { Gift, Sparkles, ShoppingBag, Menu, X, ShieldCheck, HeartHandshake, Compass } from 'lucide-react';
+import { mobileMenuVariants, mobileMenuTransition } from '../utils/animations';
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const { totals } = useSelections();
+  const shouldReduceMotion = useReducedMotion();
 
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Gift Hamper Builder', path: '/builder', highlight: true },
     { name: 'Shop Catalogue', path: '/shop' },
     { name: 'Skincare Discovery', path: '/skincare-discovery', badge: 'Guided' },
+    { name: 'Our Story', path: '/about' },
     { name: 'Contact', path: '/contact' },
     { name: 'Admin', path: '/admin', isDim: true }
   ];
@@ -48,10 +52,12 @@ export default function Navbar() {
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         {/* Brand Logo */}
         <Link to="/" className="flex items-center group py-1" aria-label="Surreal Treasures Home">
-          <img
+          <motion.img
             src="/logo.png"
             alt="Surreal Treasures - Beauty Treasure"
-            className="h-11 sm:h-13 md:h-14 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+            className="h-11 sm:h-13 md:h-14 w-auto object-contain"
+            whileHover={shouldReduceMotion ? {} : { scale: 1.05 }}
+            transition={{ duration: 0.2 }}
           />
         </Link>
 
@@ -96,9 +102,15 @@ export default function Navbar() {
           >
             <ShoppingBag className="w-4 h-4 text-[#556B52]" />
             <span className="hidden sm:inline">My Selections</span>
-            <span className="flex items-center justify-center min-w-5 h-5 px-1.5 text-xs font-bold rounded-full bg-[#556B52] text-white">
+            <motion.span
+              key={totals.totalItemCount}
+              initial={shouldReduceMotion ? {} : { scale: 1.3 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+              className="flex items-center justify-center min-w-5 h-5 px-1.5 text-xs font-bold rounded-full bg-[#556B52] text-white"
+            >
               {totals.totalItemCount}
-            </span>
+            </motion.span>
           </Link>
 
           {/* Mobile Menu Button */}
@@ -112,43 +124,57 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile Drawer Menu */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden bg-[#FAF7F2] border-b border-[#E6DDD0] px-4 pt-3 pb-6 space-y-2 shadow-xl animate-fade-in">
-          {navLinks.map((link) => {
-            const active = isActive(link.path);
-            return (
+      {/* Mobile Drawer Menu — Animated */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={shouldReduceMotion ? { opacity: 0 } : mobileMenuVariants.initial}
+            animate={shouldReduceMotion ? { opacity: 1 } : mobileMenuVariants.animate}
+            exit={shouldReduceMotion ? { opacity: 0 } : mobileMenuVariants.exit}
+            transition={mobileMenuTransition}
+            className="lg:hidden bg-[#FAF7F2] border-b border-[#E6DDD0] px-4 pt-3 pb-6 space-y-2 shadow-xl overflow-hidden"
+          >
+            {navLinks.map((link, idx) => {
+              const active = isActive(link.path);
+              return (
+                <motion.div
+                  key={link.path}
+                  initial={shouldReduceMotion ? {} : { opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.04, duration: 0.2 }}
+                >
+                  <Link
+                    to={link.path}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center justify-between px-4 py-3 rounded-xl text-base font-medium transition-colors ${
+                      active
+                        ? 'bg-[#556B52] text-white'
+                        : 'text-[#4A3728] hover:bg-[#EFE8DC]'
+                    }`}
+                  >
+                    <span>{link.name}</span>
+                    {link.badge && (
+                      <span className="px-2 py-0.5 text-xs font-semibold bg-[#E8C5B8] text-[#4A3728] rounded-full">
+                        {link.badge}
+                      </span>
+                    )}
+                  </Link>
+                </motion.div>
+              );
+            })}
+            <div className="pt-3 border-t border-[#E6DDD0]">
               <Link
-                key={link.path}
-                to={link.path}
+                to="/selections"
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center justify-between px-4 py-3 rounded-xl text-base font-medium transition-colors ${
-                  active
-                    ? 'bg-[#556B52] text-white'
-                    : 'text-[#4A3728] hover:bg-[#EFE8DC]'
-                }`}
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#556B52] text-white font-medium"
               >
-                <span>{link.name}</span>
-                {link.badge && (
-                  <span className="px-2 py-0.5 text-xs font-semibold bg-[#E8C5B8] text-[#4A3728] rounded-full">
-                    {link.badge}
-                  </span>
-                )}
+                <ShoppingBag className="w-5 h-5" />
+                <span>View My Selections ({totals.totalItemCount})</span>
               </Link>
-            );
-          })}
-          <div className="pt-3 border-t border-[#E6DDD0]">
-            <Link
-              to="/selections"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#556B52] text-white font-medium"
-            >
-              <ShoppingBag className="w-5 h-5" />
-              <span>View My Selections ({totals.totalItemCount})</span>
-            </Link>
-          </div>
-        </div>
-      )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }

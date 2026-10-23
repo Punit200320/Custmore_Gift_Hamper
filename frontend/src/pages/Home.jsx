@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import AnimatedPage from '../components/AnimatedPage';
+import { fadeInUp, fadeInUpReduced, staggerContainer, staggerItem, staggerItemReduced } from '../utils/animations';
 import { useSelections } from '../context/SelectionContext';
 import ProductCard from '../components/ProductCard';
 import ProductDetailModal from '../components/ProductDetailModal';
+import HeroProductCarousel from '../components/HeroProductCarousel';
+import ProductCarousel from '../components/ProductCarousel';
 import { OCCASIONS } from '../data/demoProducts';
 import {
   Sparkles,
@@ -58,7 +63,12 @@ export default function Home() {
     }
   ];
 
+  const shouldReduceMotion = useReducedMotion();
+  const sectionAnim = shouldReduceMotion ? fadeInUpReduced : fadeInUp;
+  const itemAnim = shouldReduceMotion ? staggerItemReduced : staggerItem;
+
   return (
+    <AnimatedPage>
     <div className="space-y-24 pb-20">
       {/* 1. HERO SECTION */}
       <section className="relative overflow-hidden pt-12 md:pt-20 pb-16 md:pb-28">
@@ -122,45 +132,26 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Right Visual Collage */}
+            {/* Right Hero Product Carousel */}
             <div className="lg:col-span-5 relative">
-              <div className="relative mx-auto max-w-md lg:max-w-none">
-                {/* Main Hero Card */}
-                <div className="rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-white">
-                  <img
-                    src="https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=800&q=80"
-                    alt="Artisan Gift Hamper by Surreal Treasures"
-                    className="w-full h-[400px] object-cover"
-                  />
-                  <div className="p-6 bg-[#FAF7F2]">
-                    <div className="flex items-center justify-between">
-                      <span className="px-3 py-1 rounded-full text-[11px] font-semibold bg-[#E8C5B8] text-[#4A3728]">
-                        Featured Hamper
-                      </span>
-                      <span className="font-serif text-xl font-bold text-[#4A3728]">
-                        ₹2,849
-                      </span>
-                    </div>
-                    <h3 className="font-serif text-xl font-semibold text-[#342417] mt-2">
-                      The Royal Bridal Radiance Hamper
-                    </h3>
-                    <p className="text-xs text-[#7A6A5A] mt-1">
-                      Kashmiri Saffron Nectar • Xiuyan Jade Roller • Pine Chest • Wax-Sealed Note
-                    </p>
-                  </div>
-                </div>
-
-                {/* Floating Micro-Badge */}
-                <div className="absolute -bottom-6 -left-6 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-[#E8DEC9] flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#556B52] flex items-center justify-center text-white">
-                    <Star className="w-5 h-5 fill-current" />
-                  </div>
-                  <div>
-                    <span className="font-serif font-bold text-sm text-[#4A3728] block">4.9 / 5.0 Rating</span>
-                    <span className="text-[11px] text-[#7A6A5A]">From 650+ Handcrafted Hampers</span>
-                  </div>
-                </div>
-              </div>
+              <HeroProductCarousel
+                products={products}
+                onSelectDetail={(prod) => setSelectedProduct(prod)}
+                onAddHamper={(hamperData) => {
+                  const fullHamper = products.find((p) => p.id === hamperData.id);
+                  if (fullHamper) {
+                    addHamperToCart({
+                      id: fullHamper.id,
+                      name: fullHamper.name,
+                      packaging: { name: fullHamper.packagingIncluded || 'Artisan Chest', price: 0 },
+                      products: (fullHamper.itemNames || []).map((name, i) => ({ id: `p-${i}`, name, price: 0, quantity: 1 })),
+                      totalPrice: fullHamper.price
+                    });
+                  } else {
+                    addHamperToCart(hamperData);
+                  }
+                }}
+              />
             </div>
           </div>
         </div>
@@ -324,7 +315,18 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 4. POPULAR ARTISAN SKINCARE */}
+      {/* 4. INTERACTIVE PRODUCT CAROUSEL */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <ProductCarousel
+          products={products}
+          title="Curated Artisan Creations"
+          subtitle="Explore all micro-batch botanical formulations, cold-processed bars, candles, and bespoke gift hampers"
+          onSelectDetail={(p) => setSelectedProduct(p)}
+          initialCategory="All"
+        />
+      </section>
+
+      {/* 5. POPULAR ARTISAN SKINCARE */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
           <div>
@@ -501,12 +503,15 @@ export default function Home() {
       </section>
 
       {/* Product Detail Modal */}
-      {selectedProduct && (
-        <ProductDetailModal
-          product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-        />
-      )}
+      <AnimatePresence>
+        {selectedProduct && (
+          <ProductDetailModal
+            product={selectedProduct}
+            onClose={() => setSelectedProduct(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
+    </AnimatedPage>
   );
 }

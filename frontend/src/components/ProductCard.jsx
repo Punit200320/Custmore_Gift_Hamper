@@ -1,12 +1,28 @@
 import React from 'react';
 import { useSelections } from '../context/SelectionContext';
-import { Star, ShoppingBag, Eye, Check } from 'lucide-react';
+import { Star, ShoppingBag, Eye } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 
 export default function ProductCard({ product, onSelectDetail }) {
   const { addStandaloneItem } = useSelections();
+  const shouldReduceMotion = useReducedMotion();
 
   return (
-    <div className="group relative flex flex-col bg-[#FFFDF9] rounded-3xl overflow-hidden border border-[#EBE3D5] shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+    <motion.div
+      initial={
+        shouldReduceMotion
+          ? { opacity: 0 }
+          : { opacity: 0, y: 16 }
+      }
+      animate={
+        shouldReduceMotion
+          ? { opacity: 1 }
+          : { opacity: 1, y: 0 }
+      }
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+      whileHover={shouldReduceMotion ? {} : { y: -4 }}
+      className="group relative flex flex-col bg-[#FFFDF9] rounded-3xl overflow-hidden border border-[#EBE3D5] shadow-sm hover:shadow-xl transition-shadow duration-300"
+    >
       {/* Product Image Container */}
       <div className="relative aspect-square overflow-hidden bg-[#F6EFE6]">
         <img
@@ -33,14 +49,16 @@ export default function ProductCard({ product, onSelectDetail }) {
         )}
 
         {/* Quick View Floating Button */}
-        <button
+        <motion.button
           type="button"
           onClick={() => onSelectDetail(product)}
-          className="absolute bottom-3 right-3 p-2.5 rounded-full bg-white/95 text-[#4A3728] shadow-md opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110 hover:bg-[#556B52] hover:text-white"
+          whileHover={shouldReduceMotion ? {} : { scale: 1.1 }}
+          whileTap={shouldReduceMotion ? {} : { scale: 0.92 }}
+          className="absolute bottom-3 right-3 p-2.5 rounded-full bg-white/95 text-[#4A3728] shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-[#556B52] hover:text-white"
           title="Quick View Details"
         >
           <Eye className="w-4 h-4" />
-        </button>
+        </motion.button>
       </div>
 
       {/* Content Container */}
@@ -74,9 +92,16 @@ export default function ProductCard({ product, onSelectDetail }) {
 
           {/* Key ingredient highlight */}
           {product.ingredients && product.ingredients.length > 0 && (
-            <div className="mt-2.5 flex items-center gap-1.5 text-[10px] text-[#695646] bg-[#FAF3EA] px-2 py-1 rounded-md border border-[#ECE0D0]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#556B52]"></span>
-              <span className="truncate">{product.ingredients[0]}</span>
+            <div className="mt-2.5 flex items-center justify-between text-[10px] text-[#695646] bg-[#FAF3EA] px-2 py-1 rounded-md border border-[#ECE0D0]">
+              <div className="flex items-center gap-1.5 truncate">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#556B52]"></span>
+                <span className="truncate">{product.ingredients[0]}</span>
+              </div>
+              {product.ingredientVerificationStatus === 'VERIFIED' && (
+                <span className="text-[9px] font-semibold text-[#3D7A4F] ml-1 shrink-0 uppercase tracking-wider">
+                  Verified
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -91,29 +116,33 @@ export default function ProductCard({ product, onSelectDetail }) {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
+            <motion.button
               type="button"
               onClick={() => onSelectDetail(product)}
+              whileHover={shouldReduceMotion ? {} : { scale: 1.04 }}
+              whileTap={shouldReduceMotion ? {} : { scale: 0.96 }}
               className="text-xs font-medium text-[#7A6A5A] hover:text-[#4A3728] px-2 py-1.5 rounded-lg hover:bg-[#F2ECE1] transition-colors"
             >
               Details
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               type="button"
               onClick={() => addStandaloneItem(product, 1)}
               disabled={!product.available}
-              className={`p-2.5 rounded-2xl flex items-center justify-center transition-all ${
+              whileHover={shouldReduceMotion || !product.available ? {} : { scale: 1.05 }}
+              whileTap={shouldReduceMotion || !product.available ? {} : { scale: 0.94 }}
+              className={`p-2.5 rounded-2xl flex items-center justify-center transition-colors shadow-sm ${
                 product.available
-                  ? 'bg-[#556B52] text-white hover:bg-[#435541] hover:scale-105 shadow-sm'
+                  ? 'bg-[#556B52] text-white hover:bg-[#435541]'
                   : 'bg-[#DDD6CE] text-[#8C847B] cursor-not-allowed'
               }`}
               title="Add to Selections"
             >
               <ShoppingBag className="w-4 h-4" />
-            </button>
+            </motion.button>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

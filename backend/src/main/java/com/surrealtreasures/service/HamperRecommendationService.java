@@ -198,7 +198,7 @@ public class HamperRecommendationService {
     /**
      * Strict eligibility evaluation according to business rules.
      */
-    private Optional<ProductExclusionDTO> evaluateEligibility(Product product, CustomerRequirementsDTO request, BigDecimal availableBudget) {
+    public Optional<ProductExclusionDTO> evaluateEligibility(Product product, CustomerRequirementsDTO request, BigDecimal availableBudget) {
         // 1. Inactive check
         if (Boolean.FALSE.equals(product.getActive())) {
             return Optional.of(new ProductExclusionDTO(

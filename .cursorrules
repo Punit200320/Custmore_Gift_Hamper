@@ -1,0 +1,11 @@
+# Surreal Treasures — AI Pair Programming Rules
+
+Always refer to and maintain `AI_CONTEXT.md` as the single source of truth for architecture, data models, state flows, styling tokens, and routes.
+
+## Core Rules:
+1. **Sync Documentation**: Whenever you modify or add features, routes, data structures, or styling, immediately update `AI_CONTEXT.md`.
+2. **Design Language & Background**: Use crisp plain white background (`#FFFFFF` / `bg-white`). Do NOT use emojis or sparkling icons (`Sparkles`) in UI, buttons, cards, or toasts. Walnut (#4A3728), Sage (#556B52), and Gold (#D4AF37) accents with serif headings (Playfair Display) and Plus Jakarta Sans body.
+3. **Non-Medical Skincare Positioning**: Maintain cosmetic, sensory, and ingredient-transparency language. Never assert medical or dermatological claims.
+4. **Order Enquiry Flow**: Retain the bespoke enquiry quotation flow (with reference IDs `ST-YYYY-XXXX`) unless explicit payment gateway integration is requested.
+5. **State & Persistence**: State is centralized in `src/context/SelectionContext.jsx` with `localStorage` persistence.
+6. **Verification**: Always ensure `npm run build` passes with zero errors before completing tasks.

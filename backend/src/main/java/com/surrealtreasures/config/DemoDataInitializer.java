@@ -283,6 +283,36 @@ public class DemoDataInitializer implements CommandLineRunner {
                 )
         );
 
+        // Set recorded physical dimensions on measured catalogue items [DEMO DATA]
+        // Note: Some products are intentionally left unmeasured to demonstrate explicit unknown dimensions status per safety policy.
+        for (Product p : demoProducts) {
+            if ("prod_soap_lavender".equals(p.getId())) {
+                p.setLengthCm(new BigDecimal("8.00"));
+                p.setWidthCm(new BigDecimal("6.00"));
+                p.setHeightCm(new BigDecimal("3.00"));
+                p.setVolumeCm3(new BigDecimal("144.00"));
+                p.setWeightGrams(new BigDecimal("120.00"));
+            } else if ("prod_body_oil_citrus".equals(p.getId())) {
+                p.setLengthCm(new BigDecimal("5.00"));
+                p.setWidthCm(new BigDecimal("5.00"));
+                p.setHeightCm(new BigDecimal("14.00"));
+                p.setVolumeCm3(new BigDecimal("350.00"));
+                p.setWeightGrams(new BigDecimal("220.00"));
+            } else if ("prod_butter_rose".equals(p.getId())) {
+                p.setLengthCm(new BigDecimal("7.50"));
+                p.setWidthCm(new BigDecimal("7.50"));
+                p.setHeightCm(new BigDecimal("6.00"));
+                p.setVolumeCm3(new BigDecimal("337.50"));
+                p.setWeightGrams(new BigDecimal("250.00"));
+            } else if ("prod_tool_jade_roller".equals(p.getId())) {
+                p.setLengthCm(new BigDecimal("15.00"));
+                p.setWidthCm(new BigDecimal("6.00"));
+                p.setHeightCm(new BigDecimal("3.00"));
+                p.setVolumeCm3(new BigDecimal("270.00"));
+                p.setWeightGrams(new BigDecimal("110.00"));
+            }
+        }
+
         productRepository.saveAll(demoProducts);
         log.info("Successfully seeded {} demo products for Surreal Treasures.", demoProducts.size());
     }

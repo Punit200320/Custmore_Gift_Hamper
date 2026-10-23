@@ -1,13 +1,23 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Heart, Sparkles, MapPin, Mail, Phone, Shield, Leaf, PackageCheck } from 'lucide-react';
+import { fadeInUp, fadeInUpReduced } from '../utils/animations';
 
 export default function Footer() {
+  const shouldReduceMotion = useReducedMotion();
+  const anim = shouldReduceMotion ? fadeInUpReduced : fadeInUp;
   return (
     <footer className="bg-[#2D231B] text-[#EDE4DA] pt-16 pb-12 border-t border-[#3E3228]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Brand Highlights Row */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-12 border-b border-[#433529]">
+        <motion.div
+          variants={anim}
+          initial="initial"
+          whileInView="whileInView"
+          viewport={{ once: true, margin: '-40px' }}
+          className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-12 border-b border-[#433529]"
+        >
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 rounded-xl bg-[#556B52]/40 text-[#A2C29E] flex items-center justify-center shrink-0">
               <Leaf className="w-5 h-5" />
@@ -55,7 +65,7 @@ export default function Footer() {
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Main Footer Links */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-10 pt-12 pb-12">
@@ -94,6 +104,11 @@ export default function Footer() {
               <li>
                 <Link to="/shop" className="hover:text-[#E7C789] transition-colors">
                   Full Catalogue
+                </Link>
+              </li>
+              <li>
+                <Link to="/about" className="hover:text-[#E7C789] transition-colors">
+                  Our Story & Heritage
                 </Link>
               </li>
               <li>
