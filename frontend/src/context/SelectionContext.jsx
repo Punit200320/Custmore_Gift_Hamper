@@ -96,6 +96,113 @@ export const SelectionProvider = ({ children }) => {
     }, 4000);
   };
 
+  // Backend connectivity state
+  const [backendStatus, setBackendStatus] = useState({
+    connected: false,
+    checked: false,
+    message: 'Connecting to backend...'
+  });
+
+  // Check backend health & sync enquiries and products on mount
+  useEffect(() => {
+    fetch('/api/health')
+      .then((res) => {
+        if (!res.ok) throw new Error('Health check error');
+        return res.json();
+      })
+      .then((health) => {
+        setBackendStatus({
+          connected: true,
+          checked: true,
+          profile: health.activeProfile || 'default',
+          message: 'Spring Boot Backend Connected (Port 8081)'
+        });
+
+        // Sync enquiries from PostgreSQL backend
+        fetch('/api/enquiries')
+          .then((res) => (res && res.ok ? res.json() : null))
+          .then((dbEnquiries) => {
+            if (Array.isArray(dbEnquiries) && dbEnquiries.length > 0) {
+              setEnquiries((prev) => {
+                const map = new Map();
+                dbEnquiries.forEach((item) => map.set(item.id, item));
+                prev.forEach((item) => {
+                  if (!map.has(item.id)) map.set(item.id, item);
+                });
+                return Array.from(map.values());
+              });
+            }
+          })
+          .catch(() => {});
+
+        // Sync and enrich product catalogue from PostgreSQL backend
+        fetch('/api/products')
+          .then((res) => (res && res.ok ? res.json() : null))
+          .then((dbProducts) => {
+            if (Array.isArray(dbProducts) && dbProducts.length > 0) {
+              setProducts((prev) => {
+                const map = new Map();
+                prev.forEach((p) => map.set(p.id, p));
+
+                dbProducts.forEach((p) => {
+                  const mapped = {
+                    id: p.id,
+                    name: p.name,
+                    tagline: p.description ? p.description.slice(0, 110) + '...' : '',
+                    category: p.category || 'Handmade Skincare',
+                    subCategory: p.category || 'Skincare',
+                    price: Number(p.retailPrice) || 450,
+                    stock: p.availableStock ?? 25,
+                    available: (p.availableStock ?? 0) > 0,
+                    rating: 4.9,
+                    reviewCount: 48,
+                    badge: p.ingredientVerificationStatus === 'VERIFIED' ? 'Verified Formulation' : 'Artisan Crafted',
+                    imageUrl: p.imageUrl || '/body-butter.jpg',
+                    description: p.description || '',
+                    ingredients: p.ingredients || [],
+                    allergens: Array.isArray(p.declaredAllergens) && p.declaredAllergens.length > 0
+                      ? `Declared allergens: ${p.declaredAllergens.join(', ')}`
+                      : 'None declared',
+                    suitability: Array.isArray(p.skinTypeSuitability)
+                      ? p.skinTypeSuitability.join(', ') + ' skin'
+                      : 'All skin types',
+                    ingredientVerificationStatus: p.ingredientVerificationStatus,
+                    lastVerificationDate: p.lastVerificationDate,
+                    crossContaminationWarning: p.crossContaminationWarning,
+                    packagingInfo: p.packagingInfo,
+                    isSkincare: true
+                  };
+
+                  if (!map.has(p.id)) {
+                    map.set(p.id, mapped);
+                  } else {
+                    const existing = map.get(p.id);
+                    map.set(p.id, {
+                      ...existing,
+                      stock: mapped.stock,
+                      available: mapped.available,
+                      ingredientVerificationStatus: mapped.ingredientVerificationStatus,
+                      lastVerificationDate: mapped.lastVerificationDate,
+                      crossContaminationWarning: mapped.crossContaminationWarning
+                    });
+                  }
+                });
+
+                return Array.from(map.values());
+              });
+            }
+          })
+          .catch(() => {});
+      })
+      .catch(() => {
+        setBackendStatus({
+          connected: false,
+          checked: true,
+          message: 'Backend Offline (Using Local Fallback)'
+        });
+      });
+  }, []);
+
   // Sync to localStorage
   useEffect(() => {
     localStorage.setItem('surreal_products', JSON.stringify(products));
@@ -288,6 +395,14 @@ export const SelectionProvider = ({ children }) => {
       prev.map((e) => (e.id === enquiryId ? { ...e, status, internalNote: note || e.internalNote } : e))
     );
     showToast(`Enquiry ${enquiryId} marked as ${status}.`);
+
+    fetch(`/api/enquiries/${enquiryId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, internalNote: note })
+    }).catch((err) => {
+      console.warn('Could not sync enquiry status with backend:', err);
+    });
   };
 
   // Calculations
@@ -340,7 +455,8 @@ export const SelectionProvider = ({ children }) => {
           totalItemCount
         },
         toastMessage,
-        showToast
+        showToast,
+        backendStatus
       }}
     >
       {children}

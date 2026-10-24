@@ -26,7 +26,8 @@ export default function AdminDashboard() {
     updateProductPriceOrStock,
     addNewProduct,
     enquiries,
-    updateEnquiryStatus
+    updateEnquiryStatus,
+    backendStatus
   } = useSelections();
 
   // Active view tab: 'enquiries' or 'inventory'
@@ -110,8 +111,13 @@ export default function AdminDashboard() {
             <span className="text-xs uppercase tracking-widest font-bold text-[#8C6D37] bg-[#FAF3E1] px-3 py-0.5 rounded-full border border-[#E8D6B7]">
               Internal Demonstration Desk
             </span>
-            <span className="text-[11px] text-[#8C7A6A]">
-              (Client Prototype Mode)
+            <span className={`text-[11px] px-3 py-0.5 rounded-full border flex items-center gap-1.5 font-medium ${
+              backendStatus?.connected
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                : 'bg-amber-50 text-amber-800 border-amber-300'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${backendStatus?.connected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
+              {backendStatus?.connected ? 'Backend: Spring Boot 3 & PostgreSQL Connected' : 'Backend: Local Fallback'}
             </span>
           </div>
           <h1 className="font-serif text-3xl sm:text-4xl font-bold text-[#3D2C1F] mt-2">
