@@ -3,7 +3,10 @@ import { initialProducts } from '../data/demoProducts';
 
 const SelectionContext = createContext(null);
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const rawApiUrl = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '').trim();
+const API_BASE_URL = rawApiUrl
+  ? (rawApiUrl.startsWith('http') ? rawApiUrl : `https://${rawApiUrl}`).replace(/\/$/, '')
+  : '';
 
 export const SelectionProvider = ({ children }) => {
   // Master product catalogue with localStorage persistence

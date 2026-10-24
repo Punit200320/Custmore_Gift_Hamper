@@ -1,7 +1,7 @@
 databases:
   - name: surreal-treasures-db
     databaseName: visit
-    user: postgres
+    user: surreal_user
     plan: free
 
 services:
