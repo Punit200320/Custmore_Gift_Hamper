@@ -3,6 +3,8 @@ import { initialProducts } from '../data/demoProducts';
 
 const SelectionContext = createContext(null);
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
 export const SelectionProvider = ({ children }) => {
   // Master product catalogue with localStorage persistence
   const [products, setProducts] = useState(() => {
@@ -105,7 +107,7 @@ export const SelectionProvider = ({ children }) => {
 
   // Check backend health & sync enquiries and products on mount
   useEffect(() => {
-    fetch('/api/health')
+    fetch(`${API_BASE_URL}/api/health`)
       .then((res) => {
         if (!res.ok) throw new Error('Health check error');
         return res.json();
@@ -119,7 +121,7 @@ export const SelectionProvider = ({ children }) => {
         });
 
         // Sync enquiries from PostgreSQL backend
-        fetch('/api/enquiries')
+        fetch(`${API_BASE_URL}/api/enquiries`)
           .then((res) => (res && res.ok ? res.json() : null))
           .then((dbEnquiries) => {
             if (Array.isArray(dbEnquiries) && dbEnquiries.length > 0) {
@@ -136,7 +138,7 @@ export const SelectionProvider = ({ children }) => {
           .catch(() => {});
 
         // Sync and enrich product catalogue from PostgreSQL backend
-        fetch('/api/products')
+        fetch(`${API_BASE_URL}/api/products`)
           .then((res) => (res && res.ok ? res.json() : null))
           .then((dbProducts) => {
             if (Array.isArray(dbProducts) && dbProducts.length > 0) {
@@ -373,8 +375,8 @@ export const SelectionProvider = ({ children }) => {
 
     setEnquiries((prev) => [newEnquiry, ...prev]);
 
-    // Send to local Express backend if available (fire-and-forget fallback)
-    fetch('/api/enquiries', {
+    // Send to backend (with graceful local fallback)
+    fetch(`${API_BASE_URL}/api/enquiries`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newEnquiry)
@@ -396,7 +398,7 @@ export const SelectionProvider = ({ children }) => {
     );
     showToast(`Enquiry ${enquiryId} marked as ${status}.`);
 
-    fetch(`/api/enquiries/${enquiryId}`, {
+    fetch(`${API_BASE_URL}/api/enquiries/${enquiryId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status, internalNote: note })
