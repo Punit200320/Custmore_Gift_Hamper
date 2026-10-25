@@ -1,4 +1,4 @@
-# Surreal Treasures — A-Powered Gifting & Skincare Discovery Platform
+# Surreal Treasures — AI-Powered Gifting & Skincare Discovery Platform
 live : https://surreal-treasures-frontend.onrender.com/
 A modern, boutique, interactive web application built for **Surreal Treasures**, a handmade skincare and personalised gifting brand.
 
